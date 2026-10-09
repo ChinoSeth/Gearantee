@@ -32,8 +32,8 @@ The tracker contains 44 leaf features. Group headings such as 2.00 and 4.00 are 
 | --- | --- |
 | Done | 5 |
 | In Review | 9 |
-| In Progress | 0 |
-| Not Started | 30 |
+| In Progress | 3 |
+| Not Started | 27 |
 | Blocked | 0 |
 
 ### By member
@@ -81,9 +81,9 @@ Shared rows count for each assigned member.
 | 27.00 | Update Equipment Item | Bansag | 10/3/2026 | 10/6/2026 | 3 | | | Not Started | | M3 |
 | 28.00 | Delete Equipment Items | Bansag | 10/3/2026 | 10/6/2026 | 3 | | | Not Started | | M3 |
 | **29.00** | **Master Data: Borrower Profile Management** | | | | | | | | | |
-| 30.00 | View Borrower's Records | Cancencia | 9/29/2026 | 10/2/2026 | 3 | | | Not Started | | M3 |
-| 31.00 | Update Borrower's Records | Cancencia | 9/29/2026 | 10/2/2026 | 3 | | | Not Started | | M3 |
-| 32.00 | Update Eligibility Status | Cancencia | 9/29/2026 | 10/1/2026 | 2 | | | Not Started | | M3 |
+| 30.00 | View Borrower's Records | Cancencia | 9/29/2026 | 10/2/2026 | 3 | 10/3/2026 |  | In Progress | | M3 |
+| 31.00 | Update Borrower's Records | Cancencia | 9/29/2026 | 10/2/2026 | 3 | 10/3/2026 |  | In Progress | | M3 |
+| 32.00 | Update Eligibility Status | Cancencia | 9/29/2026 | 10/1/2026 | 2 | 10/3/2026 |  | In Progress | | M3 |
 | **33.00** | **Transactions: Equipment Reservation** | | | | | | | | | |
 | 34.00 | Search & View Available Items Page | Cataraja | 10/6/2026 | 10/7/2026 | 1 | | | Not Started | | M4 |
 | 35.00 | Create and Submit Reservation Request | Cataraja | 10/6/2026 | 10/8/2026 | 2 | | | Not Started | | M4 |
@@ -376,3 +376,4 @@ The first version is complete when borrowers can securely reserve one available 
 | 10/1/2026 | Started WBS 14.00–18.00 implementation for user accounts, role assignment, permissions, and account activation management | Laroco |
 | 10/1/2026 | Implemented the user-administration screens, Identity workflows, permission controls, SQL Server safeguards, documentation, and regression tests; awaiting PR review before advancing WBS status | Laroco |
 | 10/2/2026 | Moved WBS 14.00–18.00 to In Review for PR #22; addressed REQ-01 with atomic CSV account creation, UX/AUDIT-01 with trusted edit redisplay and no-op activation handling, and ROLE-EDGE-01 with inactive-admin demotion; added regression tests and import instructions | Laroco |
+| 10/3/2026 | Started WBS 30.00–32.00 (Borrower Profile Management: view, update, eligibility) | Canencia |
