@@ -41,7 +41,7 @@ dotnet test .\ASI.Basecode.sln --configuration Release
 
 The suite includes real HTTP requests to a temporary loopback MVC host for authorization, antiforgery, upload results, invalid Edit rendering, and hostile search values in generated Razor links. Its authentication handler supplies test claims; production Identity authentication is unchanged. SQLite tests cover validation, transaction rollback, audits, and state changes.
 
-To additionally verify the actual SQL Server application lock, unique email index, migrations, and rollback with Windows LocalDB:
+To additionally verify the actual SQL Server application lock, unique email index, migrations, rollback, and the equipment inventory/reservation concurrency contract with Windows LocalDB:
 
 ```powershell
 sqllocaldb start MSSQLLocalDB
@@ -50,6 +50,6 @@ dotnet test .\ASI.Basecode.Tests\ASI.Basecode.Tests.csproj --configuration Relea
 Remove-Item Env:GEARANTEE_TEST_SQLSERVER
 ```
 
-SQL Server tests create uniquely named `Gearantee_Pr22_Test_<guid>` databases and delete only those databases on completion. They never use or migrate `GearanteeDev`. Without the opt-in environment variable, those tests are explicitly skipped. The existing CI continues to run the portable tests; SQL Server checks require a host with LocalDB and this opt-in.
+SQL Server tests create uniquely named disposable databases (user-administration tests use `Gearantee_Pr22_Test_<guid>`; the equipment race test uses `Gearantee_EquipmentRace_<guid>`) and delete only those databases on completion. They never use or migrate `GearanteeDev`. Without the opt-in environment variable, those tests are explicitly skipped. The existing CI continues to run the portable tests; SQL Server checks require a host with LocalDB and this opt-in.
 
 CI triggered by a PR normally checks out GitHub's synthetic merge commit. Record both its head/base pair and its actual checkout when reporting results. A successful CodeQL analysis job and the separate code-scanning alert result are different checks; inspect both before merging.

@@ -1,0 +1,53 @@
+@model ASI.Basecode.Services.ServiceModels.Category.EditCategoryViewModel
+
+<div class="mx-auto max-w-3xl">
+    <a asp-action="Index" asp-route-tab="categories" class="mb-5 inline-flex text-sm font-semibold text-primary-strong underline underline-offset-4">&larr; Back to categories</a>
+    <section class="border border-gray-200 bg-white p-5 sm:p-8">
+        <h2 class="font-display text-2xl font-semibold">Edit equipment category</h2>
+        <p class="mt-1 text-sm text-gray-500">Categories classify equipment items for catalog discovery, availability schedules, and inventory tracking.</p>
+        
+        <form asp-action="Edit" method="post" class="mt-6">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="CategoryId" />
+            <div asp-validation-summary="ModelOnly" class="validation-summary-errors" role="alert"></div>
+            
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                    <label asp-for="CategoryCode" class="mb-1 block text-sm font-medium"></label>
+                    <input asp-for="CategoryCode" class="input uppercase" placeholder="e.g. LAP" autocomplete="off" />
+                    <span asp-validation-for="CategoryCode" class="field-validation-error"></span>
+                    <p class="mt-1 text-xs text-gray-500">Short unique code used for grouping equipment inventory.</p>
+                </div>
+
+                <div>
+                    <label asp-for="CategoryName" class="mb-1 block text-sm font-medium"></label>
+                    <input asp-for="CategoryName" class="input" placeholder="e.g. Laptops" autocomplete="off" />
+                    <span asp-validation-for="CategoryName" class="field-validation-error"></span>
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label asp-for="Description" class="mb-1 block text-sm font-medium"></label>
+                    <textarea asp-for="Description" rows="3" class="input" placeholder="Brief description of items classified under this category..."></textarea>
+                    <span asp-validation-for="Description" class="field-validation-error"></span>
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input asp-for="IsActive" type="checkbox" class="size-4 accent-primary-strong" />
+                        <span class="text-sm font-medium text-gray-700">Active category</span>
+                    </label>
+                    <p class="mt-1 text-xs text-gray-500">Active categories are available when cataloging new equipment items.</p>
+                </div>
+            </div>
+
+            <div class="mt-6 flex flex-wrap justify-end gap-3 border-t border-gray-100 pt-5">
+                <a asp-action="Index" asp-route-tab="categories" class="border border-gray-200 px-4 py-2 text-sm">Cancel</a>
+                <button type="submit" class="btn-primary">Save changes</button>
+            </div>
+        </form>
+    </section>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

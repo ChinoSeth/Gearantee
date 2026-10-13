@@ -1,3 +1,4 @@
+using ASI.Basecode.Data;
 using ASI.Basecode.Data.Models;
 using ASI.Basecode.Tests.Dashboard;
 using System;
@@ -8,7 +9,7 @@ namespace ASI.Basecode.Tests.Dashboard
     internal static class DashboardSeed
     {
         public static ApplicationUser User(
-            SqliteDashboardDbContext db,
+            AsiBasecodeDBContext db,
             string code,
             bool active = true)
         {
@@ -30,7 +31,7 @@ namespace ASI.Basecode.Tests.Dashboard
         }
 
         public static BorrowerProfile Profile(
-            SqliteDashboardDbContext db,
+            AsiBasecodeDBContext db,
             ApplicationUser user,
             bool eligible = true)
         {
@@ -47,7 +48,7 @@ namespace ASI.Basecode.Tests.Dashboard
         }
 
         public static EquipmentCategory Category(
-            SqliteDashboardDbContext db,
+            AsiBasecodeDBContext db,
             string name = "Laptops")
         {
             var category = db.EquipmentCategories
@@ -69,7 +70,7 @@ namespace ASI.Basecode.Tests.Dashboard
         }
 
         public static EquipmentItem Item(
-            SqliteDashboardDbContext db,
+            AsiBasecodeDBContext db,
             string code,
             string status = DomainValues.EquipmentStatuses.Available,
             string categoryName = "Laptops")
@@ -92,7 +93,7 @@ namespace ASI.Basecode.Tests.Dashboard
         }
 
         public static Reservation Reservation(
-            SqliteDashboardDbContext db,
+            AsiBasecodeDBContext db,
             BorrowerProfile profile,
             EquipmentItem item,
             DateTime startUtc,
@@ -118,7 +119,7 @@ namespace ASI.Basecode.Tests.Dashboard
         }
 
         public static ReleaseRecord Release(
-            SqliteDashboardDbContext db,
+            AsiBasecodeDBContext db,
             Reservation reservation,
             DateTime atUtc)
         {
@@ -136,7 +137,7 @@ namespace ASI.Basecode.Tests.Dashboard
         }
 
         public static void Return(
-            SqliteDashboardDbContext db,
+            AsiBasecodeDBContext db,
             ReleaseRecord release,
             DateTime atUtc,
             string condition = DomainValues.ReturnConditions.Good)

@@ -339,7 +339,7 @@ Required rules:
 - Rejected reservations require `rejection_reason`, `reviewed_by_user_id`, and `reviewed_at`.
 - Cancelled reservations require `cancelled_at`.
 
-Overlap validation is a transactional business rule and cannot be represented by a simple unique constraint. Recheck conflicts during approval inside an appropriate SQL Server transaction.
+Overlap validation is a transactional business rule and cannot be represented by a simple unique constraint. Recheck conflicts during approval inside an appropriate SQL Server transaction. Inventory edit/archive and reservation create/approve workflows must use the same per-equipment lock protocol: begin a `SERIALIZABLE` transaction, lock the equipment row before checking reservation state, then validate and write within that transaction. In the application, use `EquipmentItemConcurrencyLock.LoadForUpdateAsync` so both workflows acquire the lock in the same order.
 
 ### 6.2 RELEASE_RECORD
 

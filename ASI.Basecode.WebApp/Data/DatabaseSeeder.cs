@@ -154,9 +154,9 @@ namespace ASI.Basecode.WebApp.Data
         }
 
         private static async Task SeedAdministratorAsync(
-            UserManager<ApplicationUser> userManager,
-            IConfiguration configuration,
-            ILogger logger)
+     UserManager<ApplicationUser> userManager,
+     IConfiguration configuration,
+     ILogger logger)
         {
             var email = configuration["SeedAdmin:Email"];
             var password = configuration["SeedAdmin:Password"];
@@ -166,8 +166,8 @@ namespace ASI.Basecode.WebApp.Data
                 string.IsNullOrWhiteSpace(password) ||
                 string.IsNullOrWhiteSpace(userCode))
             {
-                logger.LogInformation(
-                    "SeedAdmin values are not configured; roles and permissions were seeded without an administrator account.");
+                logger.LogWarning(
+                    "SeedAdmin values are not configured; skipping administrator seeding. Configure SeedAdmin:Email, SeedAdmin:Password, and SeedAdmin:UserCode explicitly.");
                 return;
             }
 
@@ -192,19 +192,14 @@ namespace ASI.Basecode.WebApp.Data
                 EnsureSucceeded(createResult, "create the initial administrator");
             }
 
-            if (created && !await userManager.IsInRoleAsync(
-                user,
-                DomainValues.Roles.Administrator))
+            if (created && !await userManager.IsInRoleAsync(user, DomainValues.Roles.Administrator))
             {
                 var roleResult = await userManager.AddToRoleAsync(
                     user,
                     DomainValues.Roles.Administrator);
-                EnsureSucceeded(
-                    roleResult,
-                    "assign the Administrator role");
+                EnsureSucceeded(roleResult, "assign the Administrator role");
             }
         }
-
         public static async Task SeedDemoAsync(
             IServiceProvider services,
             IConfiguration configuration)

@@ -133,6 +133,7 @@ The initial release is intentionally focused on the core borrowing workflow and 
 - Only active, eligible borrowers may create reservations.
 - A reservation requires an available item and a valid return date/time after its release date/time.
 - One item cannot have overlapping approved reservations or active loans.
+- Inventory edits/archives and reservation creation/approval must coordinate through the same per-equipment SQL Server lock. Each workflow must use a `SERIALIZABLE` transaction, acquire the equipment-row lock before checking reservation state, then validate and write before committing. This prevents either workflow from validating against stale inventory state.
 - Only custodians and administrators can approve, reject, release, or complete a return.
 - Equipment marked as unavailable or under maintenance cannot be reserved or released.
 - Every approval, rejection, release, return, and status change should retain the acting user and timestamp for audit history.

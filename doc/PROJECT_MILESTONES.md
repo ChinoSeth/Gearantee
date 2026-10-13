@@ -31,9 +31,9 @@ The tracker contains 44 leaf features. Group headings such as 2.00 and 4.00 are 
 | Status | Count |
 | --- | --- |
 | Done | 5 |
-| In Review | 9 |
+| In Review | 21 |
 | In Progress | 3 |
-| Not Started | 27 |
+| Not Started | 15 |
 | Blocked | 0 |
 
 ### By member
@@ -71,24 +71,24 @@ Shared rows count for each assigned member.
 | 17.00 | Configure Role Access Permissions | Laroco | 9/29/2026 | 10/2/2026 | 3 | 10/1/2026 | | In Review | #22 | M3 |
 | 18.00 | Deactivate Users | Laroco | 9/29/2026 | 10/2/2026 | 3 | 10/1/2026 | | In Review | #22 | M3 |
 | **19.00** | **Master Data: Equipment Category Management** | | | | | | | | | |
-| 20.00 | Create Category | Gesim | 9/29/2026 | 10/2/2026 | 3 | | | Not Started | | M3 |
-| 21.00 | Read Category | Gesim | 9/29/2026 | 10/2/2026 | 3 | | | Not Started | | M3 |
-| 22.00 | Update Category | Gesim | 9/29/2026 | 10/2/2026 | 3 | | | Not Started | | M3 |
-| 23.00 | Delete/Deactivate Category | Gesim | 9/29/2026 | 10/2/2026 | 3 | | | Not Started | | M3 |
+| 20.00 | Create Category | Gesim | 9/29/2026 | 10/2/2026 | 3 | 10/4/2026 |  | In Review | #25 | M3 |
+| 21.00 | Read Category | Gesim | 9/29/2026 | 10/2/2026 | 3 | 10/4/2026 |  | In Review | #25 | M3 |
+| 22.00 | Update Category | Gesim | 9/29/2026 | 10/2/2026 | 3 | 10/4/2026 |  | In Review | #25 | M3 |
+| 23.00 | Delete/Deactivate Category | Gesim | 9/29/2026 | 10/2/2026 | 3 | 10/4/2026 |  | In Review | #25 | M3 |
 | **24.00** | **Master Data: Equipment Item Management** | | | | | | | | | |
-| 25.00 | View Equipment Items | Bansag | 10/3/2026 | 10/6/2026 | 3 | | | Not Started | | M3 |
-| 26.00 | Register Equipment Item | Bansag | 10/3/2026 | 10/6/2026 | 3 | | | Not Started | | M3 |
-| 27.00 | Update Equipment Item | Bansag | 10/3/2026 | 10/6/2026 | 3 | | | Not Started | | M3 |
-| 28.00 | Delete Equipment Items | Bansag | 10/3/2026 | 10/6/2026 | 3 | | | Not Started | | M3 |
+| 25.00 | View Equipment Items | Bansag | 10/3/2026 | 10/6/2026 | 3 | 10/9/2026 | | In Review | #27 | M3 |
+| 26.00 | Register Equipment Item | Bansag | 10/3/2026 | 10/6/2026 | 3 | 10/9/2026 | | In Review | #27 | M3 |
+| 27.00 | Update Equipment Item | Bansag | 10/3/2026 | 10/6/2026 | 3 | 10/9/2026 | | In Review | #27 | M3 |
+| 28.00 | Delete Equipment Items | Bansag | 10/3/2026 | 10/6/2026 | 3 | 10/9/2026 | | In Review | #27 | M3 |
 | **29.00** | **Master Data: Borrower Profile Management** | | | | | | | | | |
-| 30.00 | View Borrower's Records | Cancencia | 9/29/2026 | 10/2/2026 | 3 | 10/3/2026 |  | In Progress | | M3 |
-| 31.00 | Update Borrower's Records | Cancencia | 9/29/2026 | 10/2/2026 | 3 | 10/3/2026 |  | In Progress | | M3 |
-| 32.00 | Update Eligibility Status | Cancencia | 9/29/2026 | 10/1/2026 | 2 | 10/3/2026 |  | In Progress | | M3 |
+| 30.00 | View Borrower's Records | Cancencia | 9/29/2026 | 10/2/2026 | 3 | 10/3/2026 | | In Progress | | M3 |
+| 31.00 | Update Borrower's Records | Cancencia | 9/29/2026 | 10/2/2026 | 3 | 10/3/2026 | | In Progress | | M3 |
+| 32.00 | Update Eligibility Status | Cancencia | 9/29/2026 | 10/1/2026 | 2 | 10/3/2026 | | In Progress | | M3 |
 | **33.00** | **Transactions: Equipment Reservation** | | | | | | | | | |
-| 34.00 | Search & View Available Items Page | Cataraja | 10/6/2026 | 10/7/2026 | 1 | | | Not Started | | M4 |
-| 35.00 | Create and Submit Reservation Request | Cataraja | 10/6/2026 | 10/8/2026 | 2 | | | Not Started | | M4 |
-| 36.00 | View Reservation Status | Cataraja | 10/6/2026 | 10/8/2026 | 2 | | | Not Started | | M4 |
-| 37.00 | Cancel Reservation | Cataraja | 10/6/2026 | 10/8/2026 | 2 | | | Not Started | | M4 |
+| 34.00 | Search & View Available Items Page | Cataraja | 10/6/2026 | 10/7/2026 | 1 | 10/7/2026 | | In Review | #26 | M4 |
+| 35.00 | Create and Submit Reservation Request | Cataraja | 10/6/2026 | 10/8/2026 | 2 | 10/7/2026 | | In Review | #26 | M4 |
+| 36.00 | View Reservation Status | Cataraja | 10/6/2026 | 10/8/2026 | 2 | 10/7/2026 | | In Review | #26 | M4 |
+| 37.00 | Cancel Reservation | Cataraja | 10/6/2026 | 10/8/2026 | 2 | 10/7/2026 | | In Review | #26 | M4 |
 | **38.00** | **Transactions: Approval and Release** | | | | | | | | | |
 | 39.00 | View Reservation Requests | Cancencia | 10/9/2026 | 10/11/2026 | 2 | | | Not Started | | M5 |
 | 40.00 | Approve Reservation Requests | Cancencia | 10/9/2026 | 10/10/2026 | 1 | | | Not Started | | M5 |
@@ -341,6 +341,7 @@ Shared rows count for each assigned member.
 | 9/29/2026 | Removed Bootstrap/template styling and added Tailwind build assets | Laroco | — |
 | 9/30/2026 | Addressed dashboard PR review findings and added regression tests | Laroco | #21 |
 | 10/1/2026 | Replaced the equipment location lookup with required `VARCHAR(200)` item text and a data-copy migration | Laroco | — |
+| 10/10/2026 | Moved password-reset, Brevo email, user-administration, and CSV import services plus their shared service models from `ASI.Basecode.WebApp` to `ASI.Basecode.Services` | Bansag | — |
 
 ## Open questions
 
@@ -377,3 +378,19 @@ The first version is complete when borrowers can securely reserve one available 
 | 10/1/2026 | Implemented the user-administration screens, Identity workflows, permission controls, SQL Server safeguards, documentation, and regression tests; awaiting PR review before advancing WBS status | Laroco |
 | 10/2/2026 | Moved WBS 14.00–18.00 to In Review for PR #22; addressed REQ-01 with atomic CSV account creation, UX/AUDIT-01 with trusted edit redisplay and no-op activation handling, and ROLE-EDGE-01 with inactive-admin demotion; added regression tests and import instructions | Laroco |
 | 10/3/2026 | Started WBS 30.00–32.00 (Borrower Profile Management: view, update, eligibility) | Canencia |
+| 10/4/2026 | Implemented equipment category creation (WBS 20.00) with duplicate checking, admin authorization, Tailwind views, and unit/authorization tests | Gesim |
+| 10/5/2026 | Moved WBS 20.00–23.00 to In Review for PR #25 per review handoff (SEC-01/SEC-02/STATE-01 pending correction; cleared premature Done/Actual End) | Gesim |
+| 10/6/2026 | Addressed PR #25 review handoff findings SEC-01, SEC-02, STATE-01, UX-01, LIST-01, and UX-02; added regression tests; clarified opt-in SQL Server tests and qualified inactive-category item registration | Gesim |
+| 10/9/2026 | Started WBS 25.00–28.00 equipment-item management implementation | Bansag |
+| 10/9/2026 | Implemented equipment-item inventory listing, search and filters, registration, editing, and safe archive/restore; web app build passes | Bansag |
+| 10/9/2026 | Addressed PR #27 CI findings by registering the item service in the category test host, using encoded form values for equipment pagination, and removing user-supplied item codes from logs | Bansag |
+| 10/9/2026 | Addressed PR #27 review feedback with optional catalog-image persistence, serializable inventory lock checks, and equipment-item service/HTTP regression tests | Bansag |
+| 10/9/2026 | Addressed PR #27 concurrency and search findings with a shared SQL Server item lock, an opt-in inventory/reservation race regression test, and collation-aware search queries | Bansag |
+| 10/9/2026 | Addressed PR #27 CONC-01/TEST-02 by locking and revalidating the item inside production reservation submission, preventing cross-item borrower range-lock deadlocks, and testing the real service against LocalDB | Bansag |
+| 10/7/2026 | Started WBS 34.00: borrower equipment catalog with search, category and free-window filters, item details with booked times, and the shared reservation availability rule | Cataraja |
+| 10/7/2026 | Started WBS 35.00: borrower reservation request form with eligibility, availability, and duplicate-request checks | Cataraja |
+| 10/7/2026 | Started WBS 36.00: My Reservations list with status tabs and a reservation detail page; stale pending requests are marked Expired when viewed | Cataraja |
+| 10/7/2026 | Started WBS 37.00: borrowers cancel their own pending or unreleased approved reservations, with an atomic status check | Cataraja |
+| 10/8/2026 | WBS 37.00: replaced the browser confirm with a reusable confirmation modal (`Components/_ConfirmDialog` + `confirm-dialog.js`) before cancelling a reservation | Cataraja |
+| 10/8/2026 | Moved WBS 34.00–37.00 to In Review for PR #26: borrower catalog, reservation requests, My Reservations status, and cancel with confirmation modal; 69 new tests | Cataraja |
+| 10/9/2026 | Addressed PR #26 review for WBS 34.00–37.00 (still In Review): merged `staging` (PR #25) and resolved conflicts; RES-01 serializes duplicate-check + insert per borrower/item with an app lock; RES-02/PERF-05 expire stale requests with one conditional UPDATE; AUTH-03 opens the catalog to any role with `equipment.browse`; AUTH-04 keeps history and cancel open without `reservation.create`; added SQL Server race and role-matrix tests | Cataraja |

@@ -1,0 +1,86 @@
+@model ASI.Basecode.Services.ServiceModels.EquipmentItem.EquipmentItemFormViewModel
+
+<div class="grid gap-4 sm:grid-cols-2">
+    <div>
+        <label asp-for="ItemCode" class="mb-1 block text-sm font-medium"></label>
+        <input asp-for="ItemCode" class="input uppercase" placeholder="e.g. EQ-PJ-003" autocomplete="off" />
+        <span asp-validation-for="ItemCode" class="field-validation-error"></span>
+    </div>
+    <div>
+        <label asp-for="ItemName" class="mb-1 block text-sm font-medium"></label>
+        <input asp-for="ItemName" class="input" placeholder="e.g. Portable projector" />
+        <span asp-validation-for="ItemName" class="field-validation-error"></span>
+    </div>
+
+    <div>
+        <label asp-for="CategoryId" class="mb-1 block text-sm font-medium"></label>
+        <select asp-for="CategoryId" class="input">
+            <option value="0">Choose a category</option>
+            @foreach (var category in Model.Categories)
+            {
+                <option value="@category.CategoryId">@category.CategoryCode - @category.CategoryName@(category.IsActive ? "" : " (Inactive - existing item)")</option>
+            }
+        </select>
+        <span asp-validation-for="CategoryId" class="field-validation-error"></span>
+        @if (Model.IsCategoryInactive)
+        {
+            <p class="mt-1 text-xs text-amber-700">The current category is inactive. Keep it or choose an active category.</p>
+        }
+    </div>
+    <div>
+        <label asp-for="Location" class="mb-1 block text-sm font-medium"></label>
+        <input asp-for="Location" class="input" placeholder="e.g. Main Store, Shelf A2" />
+        <span asp-validation-for="Location" class="field-validation-error"></span>
+    </div>
+
+    <div>
+        <label asp-for="Brand" class="mb-1 block text-sm font-medium"></label>
+        <input asp-for="Brand" class="input" placeholder="e.g. Epson" />
+        <span asp-validation-for="Brand" class="field-validation-error"></span>
+    </div>
+    <div>
+        <label asp-for="ModelName" class="mb-1 block text-sm font-medium"></label>
+        <input asp-for="ModelName" class="input" placeholder="e.g. EB-X51" />
+        <span asp-validation-for="ModelName" class="field-validation-error"></span>
+    </div>
+
+    <div class="sm:col-span-2">
+        <label asp-for="ImageUrl" class="mb-1 block text-sm font-medium"></label>
+        <input asp-for="ImageUrl" class="input" type="text" inputmode="url" autocomplete="off" placeholder="https://example.com/projector.jpg or /img/projector.jpg" />
+        <span asp-validation-for="ImageUrl" class="field-validation-error"></span>
+        <p class="mt-1 text-xs text-gray-500">Optional. Use an HTTPS image URL or a path on this site.</p>
+    </div>
+
+    <div>
+        <label asp-for="SerialNumber" class="mb-1 block text-sm font-medium"></label>
+        <input asp-for="SerialNumber" class="input" autocomplete="off" />
+        <span asp-validation-for="SerialNumber" class="field-validation-error"></span>
+        <p class="mt-1 text-xs text-gray-500">Leave blank if the item has no serial number. Entered serial numbers must be unique.</p>
+    </div>
+    <div>
+        <label asp-for="ConditionStatus" class="mb-1 block text-sm font-medium"></label>
+        <select asp-for="ConditionStatus" class="input">
+            <option value="@DomainValues.ReturnConditions.Good">Good</option>
+            <option value="@DomainValues.ReturnConditions.Damaged">Damaged</option>
+            <option value="@DomainValues.ReturnConditions.NeedsInspection">Needs inspection</option>
+            <option value="@DomainValues.ReturnConditions.UnderRepair">Under repair</option>
+        </select>
+        <span asp-validation-for="ConditionStatus" class="field-validation-error"></span>
+    </div>
+
+    <div>
+        <label asp-for="ItemStatus" class="mb-1 block text-sm font-medium"></label>
+        <select asp-for="ItemStatus" class="input">
+            <option value="@DomainValues.EquipmentStatuses.Available">Available</option>
+            <option value="@DomainValues.EquipmentStatuses.UnderMaintenance">Under maintenance</option>
+            <option value="@DomainValues.EquipmentStatuses.Unavailable">Unavailable</option>
+        </select>
+        <span asp-validation-for="ItemStatus" class="field-validation-error"></span>
+        <p class="mt-1 text-xs text-gray-500">Borrowed status is set by the equipment release and return workflow.</p>
+    </div>
+    <div class="sm:col-span-2">
+        <label asp-for="Description" class="mb-1 block text-sm font-medium"></label>
+        <textarea asp-for="Description" rows="3" class="input" placeholder="Specifications or other inventory notes..."></textarea>
+        <span asp-validation-for="Description" class="field-validation-error"></span>
+    </div>
+</div>

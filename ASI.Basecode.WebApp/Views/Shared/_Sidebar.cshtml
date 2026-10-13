@@ -52,13 +52,20 @@
             @await Html.PartialAsync("Icons/_Icon", "dashboard")<span>Dashboard</span>
         </a>
 
-        @if (isBorrower && User.HasClaim("permission", DomainValues.Permissions.EquipmentBrowse))
+        @if (User.HasClaim("permission", DomainValues.Permissions.EquipmentBrowse))
         {
-            <span class="nav-item nav-item-disabled">@await Html.PartialAsync("Icons/_Icon", "equipment")<span class="flex-1">Equipment catalog</span><span class="soon-tag">Soon</span></span>
+            <a asp-controller="Catalog" asp-action="Index" class="nav-item @(currentController == "Catalog" ? "nav-item-active" : "")" aria-current="@(currentController == "Catalog" ? "page" : null)">@await Html.PartialAsync("Icons/_Icon", "equipment")<span>Equipment catalog</span></a>
         }
         @if (isBorrower && User.HasClaim("permission", DomainValues.Permissions.ReservationCreate))
         {
-            <span class="nav-item nav-item-disabled">@await Html.PartialAsync("Icons/_Icon", "calendar")<span class="flex-1">New reservation</span><span class="soon-tag">Soon</span></span>
+            <a asp-controller="Catalog" asp-action="Index" class="nav-item @(currentController == "Reservation" && currentAction == "Create" ? "nav-item-active" : "")" aria-current="@(currentController == "Reservation" && currentAction == "Create" ? "page" : null)">@await Html.PartialAsync("Icons/_Icon", "calendar")<span>New reservation</span></a>
+        }
+        @if (isBorrower)
+        {
+            <a asp-controller="Reservation" asp-action="Index" class="nav-item @(currentController == "Reservation" && currentAction != "Create" ? "nav-item-active" : "")" aria-current="@(currentController == "Reservation" && currentAction != "Create" ? "page" : null)">@await Html.PartialAsync("Icons/_Icon", "review")<span>My reservations</span></a>
+        }
+        @if (isBorrower && User.HasClaim("permission", DomainValues.Permissions.EquipmentBrowse))
+        {
             <span class="nav-item nav-item-disabled">@await Html.PartialAsync("Icons/_Icon", "calendar")<span class="flex-1">Availability calendar</span><span class="soon-tag">Soon</span></span>
         }
         @if (isCustodian && User.HasClaim("permission", DomainValues.Permissions.ReservationReview))
@@ -75,7 +82,9 @@
         }
         @if (isAdmin && User.HasClaim("permission", DomainValues.Permissions.EquipmentManage))
         {
-            <span class="nav-item nav-item-disabled">@await Html.PartialAsync("Icons/_Icon", "equipment")<span class="flex-1">Equipment &amp; categories</span><span class="soon-tag">Soon</span></span>
+            <a asp-controller="Categories" asp-action="Index" class="nav-item @(currentController == "Categories" ? "nav-item-active" : "")" aria-current="@(currentController == "Categories" ? "page" : null)">
+                @await Html.PartialAsync("Icons/_Icon", "equipment")<span>Equipments &amp; categories</span>
+            </a>
         }
         @if (isAdmin && User.HasClaim("permission", DomainValues.Permissions.BorrowerManage))
         {

@@ -1,0 +1,506 @@
+using ASI.Basecode.Data;
+using ASI.Basecode.Data.Interfaces;
+using ASI.Basecode.Data.Models;
+using ASI.Basecode.Services.Interfaces;
+using ASI.Basecode.Services.ServiceModels.Reservations;
+using ASI.Basecode.Services.Utilities;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Linq;
+
+namespace ASI.Basecode.Services.Services
+{
+    public class ReservationService : IReservationService
+    {
+        public const int PageSize = 20;
+        private const int PurposeMaxLength = 1000;
+
+        private static readonly string[] StatusTabs =
+        {
+            DomainValues.ReservationStatuses.Pending,
+            DomainValues.ReservationStatuses.Approved,
+            DomainValues.ReservationStatuses.Rejected,
+            DomainValues.ReservationStatuses.Cancelled,
+            DomainValues.ReservationStatuses.Expired
+        };
+
+        private readonly AsiBasecodeDBContext _db;
+        private readonly IReservationRepository _reservationRepository;
+        private readonly IEquipmentItemRepository _equipmentItemRepository;
+        private readonly IBorrowerProfileRepository _borrowerProfileRepository;
+        private readonly TimeProvider _timeProvider;
+
+        public ReservationService(
+            IUnitOfWork unitOfWork,
+            IReservationRepository reservationRepository,
+            IEquipmentItemRepository equipmentItemRepository,
+            IBorrowerProfileRepository borrowerProfileRepository,
+            TimeProvider timeProvider)
+        {
+            _db = (AsiBasecodeDBContext)unitOfWork.Database;
+            _reservationRepository = reservationRepository;
+            _equipmentItemRepository = equipmentItemRepository;
+            _borrowerProfileRepository = borrowerProfileRepository;
+            _timeProvider = timeProvider;
+        }
+
+        public string CheckBorrowerEligibility(string userId)
+        {
+            return EligibilityError(FindProfile(userId));
+        }
+
+        private static string EligibilityError(BorrowerProfileSummary profile)
+        {
+            if (profile == null)
+            {
+                return "Your account has no borrower profile yet. Ask an administrator to set one up before requesting equipment.";
+            }
+
+            if (!profile.IsActive)
+            {
+                return "Your account is deactivated, so you can't request equipment.";
+            }
+
+            if (!profile.IsEligible)
+            {
+                return "You're not currently eligible to borrow equipment. Ask an administrator to review your borrower profile.";
+            }
+
+            return null;
+        }
+
+        public ReservationResult SubmitReservation(ReservationCreateViewModel model, string userId)
+        {
+            if (model == null)
+            {
+                return ReservationResult.Fail("The reservation form is incomplete. Reload and try again.");
+            }
+
+            var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
+
+            var profile = FindProfile(userId);
+            var eligibilityError = EligibilityError(profile);
+            if (eligibilityError != null)
+            {
+                return ReservationResult.Fail(eligibilityError);
+            }
+
+            var windowError = ReservationAvailability.ValidateWindow(model.ReservationStart, model.ReservationEnd, nowUtc);
+            if (windowError != null)
+            {
+                return ReservationResult.Fail(windowError);
+            }
+
+            var purpose = model.Purpose?.Trim();
+            if (string.IsNullOrEmpty(purpose))
+            {
+                return ReservationResult.Fail("Tell the custodian what the equipment is for.");
+            }
+
+            if (purpose.Length > PurposeMaxLength)
+            {
+                return ReservationResult.Fail($"The purpose must be {PurposeMaxLength} characters or fewer.");
+            }
+
+            var startUtc = ManilaClock.ToUtc(model.ReservationStart.Value);
+            var endUtc = ManilaClock.ToUtc(model.ReservationEnd.Value);
+
+            var profileId = profile.BorrowerProfileId;
+
+            var newReservation = new Reservation
+            {
+                BorrowerProfileId = profileId,
+                EquipmentId = model.EquipmentId,
+                ReservationStart = startUtc,
+                ReservationEnd = endUtc,
+                Purpose = purpose,
+                Status = DomainValues.ReservationStatuses.Pending,
+                RequestedAt = nowUtc,
+                CreatedAt = nowUtc,
+                UpdatedAt = nowUtc
+            };
+
+            // Inventory changes and reservation submissions acquire the equipment row lock
+            // first. All reservation checks and the insert stay inside that serializable
+            // boundary, so a concurrent archive/status change cannot invalidate an earlier
+            // availability check (CONC-01).
+            using (var transaction = _db.Database.BeginTransaction(IsolationLevel.Serializable))
+            {
+                var lockedItem = EquipmentItemConcurrencyLock.LoadForUpdate(_db, model.EquipmentId);
+                if (lockedItem == null)
+                {
+                    return ReservationResult.Fail("This item can't be reserved right now. It may be under maintenance, unavailable, or archived.");
+                }
+
+                // D3: one open request per borrower, item, and window. Acquire this second lock
+                // only after the shared item lock; the order is consistent across submissions.
+                _reservationRepository.AcquireSubmissionLock(profileId, model.EquipmentId);
+
+                var itemIsReservable = _equipmentItemRepository.GetEquipmentItems()
+                    .AsNoTracking()
+                    .Where(ReservationAvailability.IsReservable())
+                    .Any(item => item.EquipmentId == model.EquipmentId);
+                if (!itemIsReservable)
+                {
+                    return ReservationResult.Fail("This item can't be reserved right now. It may be under maintenance, unavailable, or archived.");
+                }
+
+                var isBooked = _reservationRepository.GetReservations()
+                    .Where(reservation => reservation.EquipmentId == model.EquipmentId)
+                    .Any(ReservationAvailability.Blocks(startUtc, endUtc, nowUtc));
+                if (isBooked)
+                {
+                    return ReservationResult.Fail("This item is already booked or still on loan during that time. Pick a time outside the booked times.");
+                }
+
+                // A Pending request whose start has passed is Expired (D2), so it no longer
+                // counts. The check and insert remain protected by both locks (RES-01).
+                var hasDuplicate = _reservationRepository.GetReservations()
+                    .Any(reservation =>
+                        reservation.BorrowerProfileId == profileId &&
+                        reservation.EquipmentId == model.EquipmentId &&
+                        reservation.Status == DomainValues.ReservationStatuses.Pending &&
+                        reservation.ReservationStart > nowUtc &&
+                        reservation.ReservationStart < endUtc &&
+                        reservation.ReservationEnd > startUtc);
+                if (hasDuplicate)
+                {
+                    return ReservationResult.Fail("You already have a pending request for this item that overlaps this time.");
+                }
+
+                _reservationRepository.AddReservation(newReservation);
+                transaction.Commit();
+            }
+
+            return new ReservationResult
+            {
+                Succeeded = true,
+                Message = "Reservation request submitted. A custodian will review it.",
+                ReservationId = newReservation.ReservationId
+            };
+        }
+
+        public ReservationIndexViewModel GetMyReservations(string userId, string status, int page)
+        {
+            var model = new ReservationIndexViewModel();
+            var profile = FindProfile(userId);
+            var statusFilter = NormalizeStatus(status);
+            model.StatusFilter = statusFilter ?? string.Empty;
+
+            var counts = new Dictionary<string, int>();
+            if (profile != null)
+            {
+                var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
+                ExpireStalePending(profile.BorrowerProfileId, nowUtc);
+
+                var mine = _reservationRepository.GetReservations()
+                    .AsNoTracking()
+                    .Where(reservation => reservation.BorrowerProfileId == profile.BorrowerProfileId);
+
+                counts = mine
+                    .GroupBy(reservation => reservation.Status)
+                    .Select(group => new { Status = group.Key, Count = group.Count() })
+                    .ToDictionary(group => group.Status, group => group.Count);
+
+                if (statusFilter != null)
+                {
+                    mine = mine.Where(reservation => reservation.Status == statusFilter);
+                }
+
+                model.TotalCount = mine.Count();
+                model.TotalPages = Math.Max(1, (int)Math.Ceiling(model.TotalCount / (double)PageSize));
+                model.Page = Math.Clamp(page, 1, model.TotalPages);
+
+                model.Items = Project(mine
+                        .OrderByDescending(reservation => reservation.RequestedAt)
+                        .ThenByDescending(reservation => reservation.ReservationId)
+                        .Skip((model.Page - 1) * PageSize)
+                        .Take(PageSize))
+                    .ToList()
+                    .Select(row => ToListItem(new ReservationListItemViewModel(), row, nowUtc))
+                    .ToList();
+            }
+
+            model.Tabs.Add(new ReservationStatusTab { Label = "All", Count = counts.Values.Sum() });
+            foreach (var tabStatus in StatusTabs)
+            {
+                model.Tabs.Add(new ReservationStatusTab
+                {
+                    Value = tabStatus,
+                    Label = tabStatus,
+                    Count = counts.TryGetValue(tabStatus, out var count) ? count : 0
+                });
+            }
+
+            return model;
+        }
+
+        public ReservationDetailsViewModel RetrieveMyReservation(long reservationId, string userId)
+        {
+            var profile = FindProfile(userId);
+            if (profile == null)
+            {
+                return null;
+            }
+
+            var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
+            ExpireStalePending(profile.BorrowerProfileId, nowUtc);
+
+            var row = Project(_reservationRepository.GetReservations()
+                    .AsNoTracking()
+                    .Where(reservation =>
+                        reservation.ReservationId == reservationId &&
+                        reservation.BorrowerProfileId == profile.BorrowerProfileId))
+                .FirstOrDefault();
+            if (row == null)
+            {
+                return null;
+            }
+
+            var reviewerName = string.Join(" ", new[] { row.ReviewerFirstName, row.ReviewerLastName }
+                .Where(part => !string.IsNullOrWhiteSpace(part)));
+
+            var details = ToListItem(new ReservationDetailsViewModel(), row, nowUtc);
+            details.Brand = row.Brand;
+            details.Model = row.Model;
+            details.Location = row.Location;
+            details.ImageUrl = row.ImageUrl;
+            details.Purpose = row.Purpose;
+            details.RejectionReason = row.RejectionReason;
+            details.ReviewerName = reviewerName.Length > 0 ? reviewerName : null;
+            details.ReviewedAtLocal = ToLocal(row.ReviewedAt);
+            details.CancelledAtLocal = ToLocal(row.CancelledAt);
+            details.ReleasedAtLocal = ToLocal(row.ReleasedAt);
+            details.ReturnedAtLocal = ToLocal(row.ReturnedAt);
+            details.ReturnedCondition = row.ReturnedCondition;
+            return details;
+        }
+
+        public ReservationResult CancelReservation(long reservationId, string userId)
+        {
+            var profile = FindProfile(userId);
+            if (profile == null)
+            {
+                return ReservationResult.Missing();
+            }
+
+            var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
+            ExpireStalePending(profile.BorrowerProfileId, nowUtc);
+
+            var current = _reservationRepository.GetReservations()
+                .AsNoTracking()
+                .Where(reservation =>
+                    reservation.ReservationId == reservationId &&
+                    reservation.BorrowerProfileId == profile.BorrowerProfileId)
+                .Select(reservation => new
+                {
+                    reservation.Status,
+                    HasRelease = reservation.ReleaseRecord != null,
+                    IsReturned = reservation.ReleaseRecord != null && reservation.ReleaseRecord.ReturnRecord != null
+                })
+                .FirstOrDefault();
+            if (current == null)
+            {
+                return ReservationResult.Missing();
+            }
+
+            var refusal = CancelRefusal(current.Status, current.HasRelease, current.IsReturned);
+            if (refusal != null)
+            {
+                return ReservationResult.Fail(refusal);
+            }
+
+            // D4, checked again inside the UPDATE itself so a custodian releasing the item
+            // at the same moment can't leave a cancelled reservation with a release record.
+            var cancelled = _reservationRepository.GetReservations()
+                .Where(reservation =>
+                    reservation.ReservationId == reservationId &&
+                    reservation.BorrowerProfileId == profile.BorrowerProfileId &&
+                    ((reservation.Status == DomainValues.ReservationStatuses.Pending &&
+                        reservation.ReservationStart > nowUtc) ||
+                     (reservation.Status == DomainValues.ReservationStatuses.Approved &&
+                        reservation.ReleaseRecord == null)))
+                .ExecuteUpdate(setters => setters
+                    .SetProperty(reservation => reservation.Status, DomainValues.ReservationStatuses.Cancelled)
+                    .SetProperty(reservation => reservation.CancelledAt, nowUtc)
+                    .SetProperty(reservation => reservation.UpdatedAt, nowUtc));
+            if (cancelled == 0)
+            {
+                return ReservationResult.Fail("This reservation changed while you were cancelling it. Reload the page to see its current status.");
+            }
+
+            return new ReservationResult
+            {
+                Succeeded = true,
+                Message = "Reservation cancelled.",
+                ReservationId = reservationId
+            };
+        }
+
+        /// <summary>Why a reservation can't be cancelled, or null when it can (D4).</summary>
+        private static string CancelRefusal(string status, bool hasRelease, bool isReturned)
+        {
+            if (isReturned)
+            {
+                return "This reservation is complete. The item has already been returned.";
+            }
+
+            if (hasRelease)
+            {
+                return "You've already picked up this item, so the reservation can't be cancelled. Return it to the custodian instead.";
+            }
+
+            return status switch
+            {
+                DomainValues.ReservationStatuses.Pending => null,
+                DomainValues.ReservationStatuses.Approved => null,
+                DomainValues.ReservationStatuses.Cancelled => "This reservation is already cancelled.",
+                DomainValues.ReservationStatuses.Rejected => "This request was rejected, so there's nothing to cancel.",
+                DomainValues.ReservationStatuses.Expired => "This request expired before it was reviewed, so there's nothing to cancel.",
+                _ => "This reservation can't be cancelled."
+            };
+        }
+
+        /// <summary>
+        /// D2: a Pending request whose start has passed was never reviewed in time, so it
+        /// becomes Expired. Written lazily whenever the borrower's reservations are read.
+        /// </summary>
+        private void ExpireStalePending(long borrowerProfileId, DateTime nowUtc)
+        {
+            // One conditional UPDATE instead of saving loaded rows: the Pending check runs at
+            // write time, so a request a custodian approved after we loaded the page is never
+            // overwritten with Expired (RES-02), and only Status and UpdatedAt change.
+            _reservationRepository.GetReservations()
+                .Where(reservation =>
+                    reservation.BorrowerProfileId == borrowerProfileId &&
+                    reservation.Status == DomainValues.ReservationStatuses.Pending &&
+                    reservation.ReservationStart <= nowUtc)
+                .ExecuteUpdate(setters => setters
+                    .SetProperty(reservation => reservation.Status, DomainValues.ReservationStatuses.Expired)
+                    .SetProperty(reservation => reservation.UpdatedAt, nowUtc));
+        }
+
+        private static string NormalizeStatus(string status)
+        {
+            if (string.IsNullOrWhiteSpace(status))
+            {
+                return null;
+            }
+
+            return StatusTabs.FirstOrDefault(tab => string.Equals(tab, status.Trim(), StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static IQueryable<ReservationRow> Project(IQueryable<Reservation> reservations)
+        {
+            return reservations.Select(reservation => new ReservationRow
+            {
+                ReservationId = reservation.ReservationId,
+                EquipmentId = reservation.EquipmentId,
+                ItemCode = reservation.EquipmentItem.ItemCode,
+                ItemName = reservation.EquipmentItem.ItemName,
+                CategoryName = reservation.EquipmentItem.Category.CategoryName,
+                Brand = reservation.EquipmentItem.Brand,
+                Model = reservation.EquipmentItem.Model,
+                Location = reservation.EquipmentItem.Location,
+                ImageUrl = reservation.EquipmentItem.ImageUrl,
+                ReservationStart = reservation.ReservationStart,
+                ReservationEnd = reservation.ReservationEnd,
+                RequestedAt = reservation.RequestedAt,
+                Status = reservation.Status,
+                Purpose = reservation.Purpose,
+                RejectionReason = reservation.RejectionReason,
+                ReviewerFirstName = reservation.ReviewedByUser.FirstName,
+                ReviewerLastName = reservation.ReviewedByUser.LastName,
+                ReviewedAt = reservation.ReviewedAt,
+                CancelledAt = reservation.CancelledAt,
+                HasRelease = reservation.ReleaseRecord != null,
+                ReleasedAt = reservation.ReleaseRecord != null
+                    ? reservation.ReleaseRecord.ActualReleaseAt
+                    : (DateTime?)null,
+                ReturnedAt = reservation.ReleaseRecord != null && reservation.ReleaseRecord.ReturnRecord != null
+                    ? reservation.ReleaseRecord.ReturnRecord.ActualReturnAt
+                    : (DateTime?)null,
+                ReturnedCondition = reservation.ReleaseRecord != null && reservation.ReleaseRecord.ReturnRecord != null
+                    ? reservation.ReleaseRecord.ReturnRecord.ReturnedCondition
+                    : null
+            });
+        }
+
+        private static T ToListItem<T>(T item, ReservationRow row, DateTime nowUtc)
+            where T : ReservationListItemViewModel
+        {
+            item.ReservationId = row.ReservationId;
+            item.EquipmentId = row.EquipmentId;
+            item.ItemCode = row.ItemCode;
+            item.ItemName = row.ItemName;
+            item.CategoryName = row.CategoryName;
+            item.StartLocal = ManilaClock.ToLocal(row.ReservationStart);
+            item.EndLocal = ManilaClock.ToLocal(row.ReservationEnd);
+            item.RequestedAtLocal = ManilaClock.ToLocal(row.RequestedAt);
+            item.Status = row.Status;
+            item.DisplayStatus = ReservationDisplayStatus.For(row.Status, row.ReservationEnd, row.ReleasedAt, row.ReturnedAt, nowUtc);
+            item.CanCancel = CancelRefusal(row.Status, row.HasRelease, row.ReturnedAt.HasValue) == null;
+            return item;
+        }
+
+        private static DateTime? ToLocal(DateTime? utc)
+        {
+            return utc.HasValue ? ManilaClock.ToLocal(utc.Value) : (DateTime?)null;
+        }
+
+        private BorrowerProfileSummary FindProfile(string userId)
+        {
+            if (string.IsNullOrEmpty(userId))
+            {
+                return null;
+            }
+
+            return _borrowerProfileRepository.GetBorrowerProfiles()
+                .AsNoTracking()
+                .Where(profile => profile.UserId == userId)
+                .Select(profile => new BorrowerProfileSummary
+                {
+                    BorrowerProfileId = profile.BorrowerProfileId,
+                    IsEligible = profile.IsEligible,
+                    IsActive = profile.User.IsActive
+                })
+                .FirstOrDefault();
+        }
+
+        private sealed class ReservationRow
+        {
+            public long ReservationId { get; set; }
+            public long EquipmentId { get; set; }
+            public string ItemCode { get; set; }
+            public string ItemName { get; set; }
+            public string CategoryName { get; set; }
+            public string Brand { get; set; }
+            public string Model { get; set; }
+            public string Location { get; set; }
+            public string ImageUrl { get; set; }
+            public DateTime ReservationStart { get; set; }
+            public DateTime ReservationEnd { get; set; }
+            public DateTime RequestedAt { get; set; }
+            public string Status { get; set; }
+            public string Purpose { get; set; }
+            public string RejectionReason { get; set; }
+            public string ReviewerFirstName { get; set; }
+            public string ReviewerLastName { get; set; }
+            public DateTime? ReviewedAt { get; set; }
+            public DateTime? CancelledAt { get; set; }
+            public bool HasRelease { get; set; }
+            public DateTime? ReleasedAt { get; set; }
+            public DateTime? ReturnedAt { get; set; }
+            public string ReturnedCondition { get; set; }
+        }
+
+        private sealed class BorrowerProfileSummary
+        {
+            public long BorrowerProfileId { get; set; }
+            public bool IsEligible { get; set; }
+            public bool IsActive { get; set; }
+        }
+    }
+}

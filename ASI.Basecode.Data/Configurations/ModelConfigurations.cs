@@ -229,6 +229,14 @@ namespace ASI.Basecode.Data.Configurations
                 .HasDefaultValueSql("SYSUTCDATETIME()");
 
             builder.HasIndex(x => new { x.EquipmentId, x.ReservationStart, x.ReservationEnd });
+            builder.HasIndex(x => new
+            {
+                x.BorrowerProfileId,
+                x.EquipmentId,
+                x.Status,
+                x.ReservationStart,
+                x.ReservationEnd
+            });
             builder.HasIndex(x => x.Status);
             builder.HasOne(x => x.BorrowerProfile)
                 .WithMany(x => x.Reservations)

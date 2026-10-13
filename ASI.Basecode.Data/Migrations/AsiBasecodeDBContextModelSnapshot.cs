@@ -526,13 +526,13 @@ namespace ASI.Basecode.Data.Migrations
 
                     b.HasKey("ReservationId");
 
-                    b.HasIndex("BorrowerProfileId");
-
                     b.HasIndex("ReviewedByUserId");
 
                     b.HasIndex("Status");
 
                     b.HasIndex("EquipmentId", "ReservationStart", "ReservationEnd");
+
+                    b.HasIndex("BorrowerProfileId", "EquipmentId", "Status", "ReservationStart", "ReservationEnd");
 
                     b.ToTable("Reservation", null, t =>
                         {
