@@ -334,7 +334,7 @@ flowchart TD
     K -->|Yes| M[Generate Borrowing Report]
 ```
 
-The borrowing history includes completed, cancelled, and overdue transactions and supports searching, filtering, and report generation.
+The borrowing history includes reservation, release, return, cancelled, and overdue records. Search covers borrower name, user code, school ID, item name, and item code. Filters include borrower, item/category, scheduled borrowing-start date range, status, and late-return status. Results are paginated and displayed in Philippine time. Authorized users can download a CSV containing all matching filtered records; the download uses the same access scope and filters as the page.
 
 ---
 

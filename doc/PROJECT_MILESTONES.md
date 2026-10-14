@@ -31,9 +31,9 @@ The tracker contains 44 leaf features. Group headings such as 2.00 and 4.00 are 
 | Status | Count |
 | --- | --- |
 | Done | 5 |
-| In Review | 21 |
+| In Review | 25 |
 | In Progress | 0 |
-| Not Started | 18 |
+| Not Started | 14 |
 | Blocked | 0 |
 
 ### By member
@@ -103,10 +103,10 @@ Shared rows count for each assigned member.
 | 49.00 | View Availability Calendar Page | Laroco | 10/9/2026 | 10/13/2026 | 4 | | | Not Started | | M6 |
 | 50.00 | Filter Calendar View | Laroco | 10/10/2026 | 10/12/2026 | 2 | | | Not Started | | M6 |
 | **51.00** | **Reports: Borrowing History Report** | | | | | | | | | |
-| 52.00 | View Borrowing History Page | Bansag | 10/14/2026 | 10/16/2026 | 2 | | | Not Started | | M6 |
-| 53.00 | Search Borrowing History | Bansag | 10/15/2026 | 10/16/2026 | 1 | | | Not Started | | M6 |
-| 54.00 | Filter Borrowing History | Bansag | 10/16/2026 | 10/17/2026 | 1 | | | Not Started | | M6 |
-| 55.00 | Generate Borrowing Report | Bansag | 10/18/2026 | 10/21/2026 | 3 | | | Not Started | | M6 |
+| 52.00 | View Borrowing History Page | Bansag | 10/14/2026 | 10/16/2026 | 2 | 10/14/2026 | | In Review | #29 | M6 |
+| 53.00 | Search Borrowing History | Bansag | 10/15/2026 | 10/16/2026 | 1 | 10/14/2026 | | In Review | #29 | M6 |
+| 54.00 | Filter Borrowing History | Bansag | 10/16/2026 | 10/17/2026 | 1 | 10/14/2026 | | In Review | #29 | M6 |
+| 55.00 | Generate Borrowing Report | Bansag | 10/18/2026 | 10/21/2026 | 3 | 10/14/2026 | | In Review | #29 | M6 |
 | 56.00 | Testing and Debugging | Gesim, Cataraja | 10/22/2026 | 10/26/2026 | 4 | | | Not Started | | M7 |
 
 > Feature names correct spelling in the WBS sheet, including “Receive,” “Equipment,” and “items.” Correct the sheet as well, or use its spelling here if the team decides an exact match is required.
@@ -393,3 +393,5 @@ The first version is complete when borrowers can securely reserve one available 
 | 10/8/2026 | WBS 37.00: replaced the browser confirm with a reusable confirmation modal (`Components/_ConfirmDialog` + `confirm-dialog.js`) before cancelling a reservation | Cataraja |
 | 10/8/2026 | Moved WBS 34.00–37.00 to In Review for PR #26: borrower catalog, reservation requests, My Reservations status, and cancel with confirmation modal; 69 new tests | Cataraja |
 | 10/9/2026 | Addressed PR #26 review for WBS 34.00–37.00 (still In Review): merged `staging` (PR #25) and resolved conflicts; RES-01 serializes duplicate-check + insert per borrower/item with an app lock; RES-02/PERF-05 expire stale requests with one conditional UPDATE; AUTH-03 opens the catalog to any role with `equipment.browse`; AUTH-04 keeps history and cancel open without `reservation.create`; added SQL Server race and role-matrix tests | Cataraja |
+| 10/14/2026 | Started WBS 52.00–55.00 implementation for searchable, filterable borrowing history and report generation | Bansag |
+| 10/14/2026 | Moved WBS 52.00–55.00 to In Review for PR #29; completed local build/test verification, generated Tailwind CSS, and updated the vulnerable XML cryptography dependency | Bansag |
