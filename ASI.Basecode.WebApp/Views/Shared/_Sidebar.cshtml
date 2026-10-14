@@ -64,9 +64,9 @@
         {
             <a asp-controller="Reservation" asp-action="Index" class="nav-item @(currentController == "Reservation" && currentAction != "Create" ? "nav-item-active" : "")" aria-current="@(currentController == "Reservation" && currentAction != "Create" ? "page" : null)">@await Html.PartialAsync("Icons/_Icon", "review")<span>My reservations</span></a>
         }
-        @if (isBorrower && User.HasClaim("permission", DomainValues.Permissions.EquipmentBrowse))
+        @if (User.HasClaim("permission", DomainValues.Permissions.EquipmentBrowse))
         {
-            <span class="nav-item nav-item-disabled">@await Html.PartialAsync("Icons/_Icon", "calendar")<span class="flex-1">Availability calendar</span><span class="soon-tag">Soon</span></span>
+            <a asp-controller="AvailabilityCalendar" asp-action="Index" class="nav-item @(currentController == "AvailabilityCalendar" ? "nav-item-active" : "")" aria-current="@(currentController == "AvailabilityCalendar" ? "page" : null)">@await Html.PartialAsync("Icons/_Icon", "calendar")<span>Availability calendar</span></a>
         }
         @if (isCustodian && User.HasClaim("permission", DomainValues.Permissions.ReservationReview))
         {
@@ -75,10 +75,6 @@
         @if (isCustodian && User.HasClaim("permission", DomainValues.Permissions.TransactionReleaseReturn))
         {
             <span class="nav-item nav-item-disabled">@await Html.PartialAsync("Icons/_Icon", "return")<span class="flex-1">Return &amp; condition</span><span class="soon-tag">Soon</span></span>
-        }
-        @if (isCustodian && User.HasClaim("permission", DomainValues.Permissions.EquipmentBrowse))
-        {
-            <span class="nav-item nav-item-disabled">@await Html.PartialAsync("Icons/_Icon", "calendar")<span class="flex-1">Availability calendar</span><span class="soon-tag">Soon</span></span>
         }
         @if (isAdmin && User.HasClaim("permission", DomainValues.Permissions.EquipmentManage))
         {
@@ -93,10 +89,6 @@
         @if (isAdmin && User.HasClaim("permission", DomainValues.Permissions.UserRoleManage))
         {
             <a asp-controller="Users" asp-action="Index" class="nav-item @(currentController == "Users" ? "nav-item-active" : "")" aria-current="@(currentController == "Users" ? "page" : null)">@await Html.PartialAsync("Icons/_Icon", "users")<span>Users &amp; roles</span></a>
-        }
-        @if (isAdmin && User.HasClaim("permission", DomainValues.Permissions.EquipmentBrowse))
-        {
-            <span class="nav-item nav-item-disabled">@await Html.PartialAsync("Icons/_Icon", "calendar")<span class="flex-1">Availability calendar</span><span class="soon-tag">Soon</span></span>
         }
         @if (User.HasClaim("permission", DomainValues.Permissions.HistoryView))
         {

@@ -48,6 +48,7 @@
                 {
                     <a asp-controller="Reservation" asp-action="Create" asp-route-equipmentId="@Model.EquipmentId" asp-route-from="@fromValue" asp-route-to="@toValue" class="btn-primary">Reserve this item</a>
                 }
+                <a asp-controller="AvailabilityCalendar" asp-action="Index" asp-route-equipmentId="@Model.EquipmentId" class="inline-flex min-h-10 items-center border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700">View schedule</a>
             </div>
         </div>
     </section>

@@ -95,9 +95,10 @@ The initial release is intentionally focused on the core borrowing workflow and 
 - Authorized users can export all matching filtered records to CSV. The export uses the same server-side filters as the page and protects text values from spreadsheet formula injection.
 
 #### Availability Calendar
-- Users can view a daily or weekly calendar of equipment availability.
-- The calendar distinguishes available, reserved, borrowed, and under-maintenance items.
-- It helps borrowers select dates that do not conflict with existing reservations.
+- Users with `equipment.browse` can view a daily or weekly calendar filtered by category, equipment item, and its free-text location.
+- The calendar displays approved reservations, active loans, and overdue loans in Philippine time; it shows current maintenance/unavailable state in the equipment list without inventing a repair date.
+- Select an equipment item to see its schedule. Borrowers with `reservation.create` can select an open future interval to continue to the existing reservation form; the reservation service rechecks eligibility and conflicts before saving.
+- Calendar results contain schedule and equipment details only, never another borrower's identity or request purpose.
 
 ### 3.5 Administration
 

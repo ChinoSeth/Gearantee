@@ -88,6 +88,33 @@
   .register-card h1 { @apply mt-6 font-display text-3xl font-semibold text-ink; }
   .register-card .field-label { @apply mb-1.5 block text-sm font-medium text-gray-700; }
   .error-card { @apply mx-auto max-w-2xl border-l-4 border-ink bg-white p-6 sm:p-10; }
+  .availability-item { @apply min-w-0; }
+  .availability-status { @apply inline-flex shrink-0 border px-2 py-1 text-[10px] font-semibold uppercase tracking-wide; }
+  .availability-status-open { @apply border-primary text-primary-strong; }
+  .availability-status-unavailable { @apply border-gray-200 text-gray-500; }
+  .availability-legend-dot { @apply size-3 shrink-0; }
+  .availability-legend-reserved { background: #5980A6; }
+  .availability-legend-borrowed { background: #8A5A00; }
+  .availability-legend-overdue { background: #B42318; }
+  .availability-legend-open { background: #4A6F94; }
+}
+
+.availability-calendar .fc .fc-toolbar { flex-wrap: wrap; gap: .75rem; }
+.availability-calendar .fc .fc-toolbar-title { font-family: "Barlow Condensed", sans-serif; font-size: 1.5rem; font-weight: 600; }
+.availability-calendar .fc .fc-button { border-radius: 0; border-color: #D9D9DC; background: #fff; color: #3A3C40; box-shadow: none; }
+.availability-calendar .fc .fc-button:hover,
+.availability-calendar .fc .fc-button:focus { border-color: #4A6F94; background: #EBF5FF; color: #4A6F94; box-shadow: none; }
+.availability-calendar .fc .fc-button-primary:not(:disabled).fc-button-active { border-color: #4A6F94; background: #4A6F94; color: #fff; }
+.availability-calendar .fc .fc-timegrid-slot-label,
+.availability-calendar .fc .fc-col-header-cell-cushion { color: #3A3C40; font-size: .75rem; }
+.availability-calendar .fc .fc-event { cursor: default; font-size: .75rem; }
+.availability-calendar .fc .fc-highlight { background: rgb(89 128 166 / 18%); }
+.availability-calendar .fc .fc-timegrid-now-indicator-line,
+.availability-calendar .fc .fc-timegrid-now-indicator-arrow { border-color: #B42318; color: #B42318; }
+
+@media (max-width: 639px) {
+  .availability-calendar .fc .fc-toolbar-title { font-size: 1.2rem; }
+  .availability-calendar .fc .fc-button { padding: .35rem .45rem; font-size: .7rem; }
 }
 
 @media (max-width: 1023px) {

@@ -32,8 +32,8 @@ The tracker contains 44 leaf features. Group headings such as 2.00 and 4.00 are 
 | --- | --- |
 | Done | 5 |
 | In Review | 25 |
-| In Progress | 0 |
-| Not Started | 14 |
+| In Progress | 2 |
+| Not Started | 12 |
 | Blocked | 0 |
 
 ### By member
@@ -100,8 +100,8 @@ Shared rows count for each assigned member.
 | 46.00 | Update Item Status | Cataraja | 10/11/2026 | 10/13/2026 | 2 | | | Not Started | | M5 |
 | 47.00 | Identify Late Returns | Cataraja | 10/11/2026 | 10/13/2026 | 2 | | | Not Started | | M5 |
 | **48.00** | **Reports: Availability Calendar** | | | | | | | | | |
-| 49.00 | View Availability Calendar Page | Laroco | 10/9/2026 | 10/13/2026 | 4 | | | Not Started | | M6 |
-| 50.00 | Filter Calendar View | Laroco | 10/10/2026 | 10/12/2026 | 2 | | | Not Started | | M6 |
+| 49.00 | View Availability Calendar Page | Laroco | 10/9/2026 | 10/13/2026 | 4 | 10/14/2026 | | In Progress | | M6 |
+| 50.00 | Filter Calendar View | Laroco | 10/10/2026 | 10/12/2026 | 2 | 10/14/2026 | | In Progress | | M6 |
 | **51.00** | **Reports: Borrowing History Report** | | | | | | | | | |
 | 52.00 | View Borrowing History Page | Bansag | 10/14/2026 | 10/16/2026 | 2 | 10/14/2026 | | In Review | #29 | M6 |
 | 53.00 | Search Borrowing History | Bansag | 10/15/2026 | 10/16/2026 | 1 | 10/14/2026 | | In Review | #29 | M6 |
@@ -395,3 +395,4 @@ The first version is complete when borrowers can securely reserve one available 
 | 10/9/2026 | Addressed PR #26 review for WBS 34.00–37.00 (still In Review): merged `staging` (PR #25) and resolved conflicts; RES-01 serializes duplicate-check + insert per borrower/item with an app lock; RES-02/PERF-05 expire stale requests with one conditional UPDATE; AUTH-03 opens the catalog to any role with `equipment.browse`; AUTH-04 keeps history and cancel open without `reservation.create`; added SQL Server race and role-matrix tests | Cataraja |
 | 10/14/2026 | Started WBS 52.00–55.00 implementation for searchable, filterable borrowing history and report generation | Bansag |
 | 10/14/2026 | Moved WBS 52.00–55.00 to In Review for PR #29; completed local build/test verification, generated Tailwind CSS, and updated the vulnerable XML cryptography dependency | Bansag |
+| 10/14/2026 | Started WBS 49.00–50.00 availability calendar and equipment/category/location filters | Laroco |
