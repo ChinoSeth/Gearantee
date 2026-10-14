@@ -100,7 +100,7 @@
         }
         @if (User.HasClaim("permission", DomainValues.Permissions.HistoryView))
         {
-            <span class="nav-item nav-item-disabled">@await Html.PartialAsync("Icons/_Icon", "report")<span class="flex-1">Borrowing history</span><span class="soon-tag">Soon</span></span>
+            <a asp-controller="BorrowingHistory" asp-action="Index" class="nav-item @(currentController == "BorrowingHistory" ? "nav-item-active" : "")" aria-current="@(currentController == "BorrowingHistory" ? "page" : null)">@await Html.PartialAsync("Icons/_Icon", "report")<span>Borrowing history</span></a>
         }
     </nav>
 
