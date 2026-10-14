@@ -37,6 +37,7 @@ namespace ASI.Basecode.WebApp
             _services.AddScoped<IUserAdministrationService, UserAdministrationService>();
             _services.AddScoped<ICategoryService, CategoryService>();
             _services.AddScoped<IEquipmentItemService, EquipmentItemService>();
+            _services.AddScoped<IAvailabilityCalendarService, AvailabilityCalendarService>();
 
             // Repositories
             _services.AddScoped<IEquipmentItemRepository, EquipmentItemRepository>();

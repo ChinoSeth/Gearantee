@@ -35,7 +35,10 @@
                 <p class="eyebrow">Equipment in your care</p>
                 <h2 id="loans-heading" class="font-display text-xl font-semibold text-ink">My equipment on loan</h2>
             </div>
-            <span class="inline-flex items-center gap-2 text-sm text-gray-500">Open calendar <span class="soon-tag">Soon</span></span>
+            @if (User.HasClaim("permission", "equipment.browse"))
+            {
+                <a asp-controller="AvailabilityCalendar" asp-action="Index" class="text-sm font-semibold text-primary-strong underline underline-offset-4">Open calendar</a>
+            }
         </div>
 
         @if (Model.CurrentLoans.Count == 0)

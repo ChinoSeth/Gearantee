@@ -13,6 +13,8 @@ Install the following on your computer:
 
 This repository uses .NET SDK `9.0.318`. A newer .NET 9 patch may also work because `global.json` allows the latest patch release.
 
+Node.js 24 and npm are only needed to rebuild the Tailwind and FullCalendar assets. The generated files are checked in, so Node.js is not required just to run the website.
+
 Confirm that .NET is installed:
 
 ```powershell
@@ -100,6 +102,17 @@ dotnet run --project .\ASI.Basecode.WebApp\ASI.Basecode.WebApp.csproj -- --seed
 The seed command is safe to run again. It will not create duplicate roles or permissions.
 
 ## 7. Run the website
+
+If you change calendar scripts or styles, rebuild the frontend assets from `ASI.Basecode.WebApp`:
+
+```powershell
+cd .\ASI.Basecode.WebApp
+npm ci
+npm run assets:build
+cd ..
+```
+
+The command refreshes the FullCalendar bundle and license in `wwwroot/lib/fullcalendar` and regenerates the minified Tailwind stylesheet.
 
 Set the development environment and local address for the current PowerShell session:
 

@@ -342,27 +342,24 @@ The borrowing history includes reservation, release, return, cancelled, and over
 
 ```mermaid
 flowchart TD
-    A[Open Availability Calendar] --> B[Select Date / Week]
+    A[Open Availability Calendar] --> B[Select Day / Week]
 
-    B --> C[Load Equipment Schedule]
+    B --> C[Filter by Category, Equipment, and Location]
 
-    C --> D[Check Reservations]
-    D --> E[Check Active Borrowings]
-    E --> F[Check Maintenance Status]
+    C --> D[Load Matching Equipment and Schedule]
 
-    F --> G[Display Timeline]
+    D --> E[Check Approved Reservations and Active Loans]
+    E --> F[Display Reserved, Borrowed, and Overdue Times]
+    F --> G[Show Current Maintenance / Unavailable State]
 
-    G --> H{Apply Filters?}
+    G --> H{Borrower selects an open future interval?}
 
-    H -->|No| I[Display All Equipment]
-    H -->|Yes| J[Filter by Category]
-    J --> K[Filter by Equipment]
-    K --> L[Filter by Location]
-
-    L --> M[Display Filtered Timeline]
+    H -->|No| I[Continue Reviewing Schedule]
+    H -->|Yes| J[Open Reservation Form for Selected Item and Time]
+    J --> K[Recheck Eligibility and Conflicts Before Saving]
 ```
 
-The calendar provides a daily/weekly view of equipment availability, reservations, active borrowing, and maintenance status.
+The calendar is read-only; the reservation service remains responsible for final eligibility and conflict checks. Equipment location is filtered as free text stored on each item. The calendar does not show borrower identity or request purpose. Maintenance and unavailable items have no recorded schedule end date, so the calendar shows their current state without implying a repair completion time.
 
 ---
 
