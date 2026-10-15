@@ -11,7 +11,10 @@ using System.Threading.Tasks;
 
 namespace ASI.Basecode.WebApp.Controllers
 {
-    [Authorize(Policy = DomainValues.Permissions.BorrowerManage)]
+    [Authorize(
+        Roles = DomainValues.Roles.Administrator,
+        Policy = DomainValues.Permissions.BorrowerManage)]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
     public class BorrowerProfileController : ControllerBase<BorrowerProfileController>
     {
         private readonly IBorrowerProfileService _borrowerProfileService;
