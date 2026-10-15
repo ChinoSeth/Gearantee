@@ -31,8 +31,8 @@ The tracker contains 44 leaf features. Group headings such as 2.00 and 4.00 are 
 | Status | Count |
 | --- | --- |
 | Done | 5 |
-| In Review | 25 |
-| In Progress | 5 |
+| In Review | 28 |
+| In Progress | 2 |
 | Not Started | 9 |
 | Blocked | 0 |
 
@@ -81,9 +81,9 @@ Shared rows count for each assigned member.
 | 27.00 | Update Equipment Item | Bansag | 10/3/2026 | 10/6/2026 | 3 | 10/9/2026 | | In Review | #27 | M3 |
 | 28.00 | Delete Equipment Items | Bansag | 10/3/2026 | 10/6/2026 | 3 | 10/9/2026 | | In Review | #27 | M3 |
 | **29.00** | **Master Data: Borrower Profile Management** | | | | | | | | | |
-| 30.00 | View Borrower's Records | Cancencia | 9/29/2026 | 10/2/2026 | 3 | 10/3/2026 | | In Progress | | M3 |
-| 31.00 | Update Borrower's Records | Cancencia | 9/29/2026 | 10/2/2026 | 3 | 10/3/2026 | | In Progress | | M3 |
-| 32.00 | Update Eligibility Status | Cancencia | 9/29/2026 | 10/1/2026 | 2 | 10/3/2026 | | In Progress | | M3 |
+| 30.00 | View Borrower's Records | Cancencia | 9/29/2026 | 10/2/2026 | 3 | 10/3/2026 | | In Review | #31 | M3 |
+| 31.00 | Update Borrower's Records | Cancencia | 9/29/2026 | 10/2/2026 | 3 | 10/3/2026 | | In Review | #31 | M3 |
+| 32.00 | Update Eligibility Status | Cancencia | 9/29/2026 | 10/1/2026 | 2 | 10/3/2026 | | In Review | #31 | M3 |
 | **33.00** | **Transactions: Equipment Reservation** | | | | | | | | | |
 | 34.00 | Search & View Available Items Page | Cataraja | 10/6/2026 | 10/7/2026 | 1 | 10/7/2026 | | In Review | #26 | M4 |
 | 35.00 | Create and Submit Reservation Request | Cataraja | 10/6/2026 | 10/8/2026 | 2 | 10/7/2026 | | In Review | #26 | M4 |
@@ -397,3 +397,4 @@ The first version is complete when borrowers can securely reserve one available 
 | 10/14/2026 | Started WBS 52.00–55.00 implementation for searchable, filterable borrowing history and report generation | Bansag |
 | 10/14/2026 | Moved WBS 52.00–55.00 to In Review for PR #29; completed local build/test verification, generated Tailwind CSS, and updated the vulnerable XML cryptography dependency | Bansag |
 | 10/14/2026 | Started WBS 49.00–50.00 availability calendar and equipment/category/location filters | Laroco |
+| 10/14/2026 | Moved WBS 30.00–32.00 to In Review for PR #31; added borrower-profile service and authorization tests | Canencia |
