@@ -136,6 +136,8 @@ ASP.NET Core MVC application
 | Tailwind CSS CLI/PostCSS | Compiles Tailwind source CSS into the application stylesheet. |
 | FullCalendar | Equipment availability calendar. |
 
+The web app pins FullCalendar Standard in `ASI.Basecode.WebApp/package-lock.json`. Its daily/weekly time-grid bundle and license are copied into `wwwroot/lib/fullcalendar` by `npm run vendor:build`; `npm run assets:build` also regenerates the minified Tailwind stylesheet. The calendar uses FullCalendar's named `Asia/Manila` timezone and does not require the Premium Scheduler/resource timeline.
+
 ## 8. Configuration and Secrets
 
 Required settings include:

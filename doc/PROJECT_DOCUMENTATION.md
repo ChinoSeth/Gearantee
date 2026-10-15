@@ -89,14 +89,16 @@ The initial release is intentionally focused on the core borrowing workflow and 
 ### 3.4 Reports and Visibility
 
 #### Borrowing History Report
-- Authorized staff can view filterable borrowing history.
-- Filters include borrower, equipment item/category, date range, transaction status, and late-return status.
-- The report supports accountability by showing request, approval, release, and return records.
+- Users with `history.view` can review reservation and loan history; borrower-role users are restricted to their own records.
+- Search covers borrower name, user code, school ID, item name, and item code. Filters include borrower, item text, category, borrowing-start date range, status, and late-return status.
+- The paginated page shows requested, scheduled, actual release, and actual return times in Philippine time, along with return condition and late days when recorded.
+- Authorized users can export all matching filtered records to CSV. The export uses the same server-side filters as the page and protects text values from spreadsheet formula injection.
 
 #### Availability Calendar
-- Users can view a daily or weekly calendar of equipment availability.
-- The calendar distinguishes available, reserved, borrowed, and under-maintenance items.
-- It helps borrowers select dates that do not conflict with existing reservations.
+- Users with `equipment.browse` can view a daily or weekly calendar filtered by category, equipment item, and its free-text location.
+- The calendar displays approved reservations, active loans, and overdue loans in Philippine time; it shows current maintenance/unavailable state in the equipment list without inventing a repair date.
+- Select an equipment item to see its schedule. Borrowers with `reservation.create` can select an open future interval to continue to the existing reservation form; the reservation service rechecks eligibility and conflicts before saving.
+- Calendar results contain schedule and equipment details only, never another borrower's identity or request purpose.
 
 ### 3.5 Administration
 

@@ -1,0 +1,165 @@
+@model ASI.Basecode.Services.ServiceModels.BorrowingHistory.BorrowingHistoryIndexViewModel
+@using ASI.Basecode.WebApp.Models.Dashboard
+@{
+    var filter = Model.Filter;
+    var fromDate = filter.FromDate?.ToString("yyyy-MM-dd");
+    var toDate = filter.ToDate?.ToString("yyyy-MM-dd");
+}
+
+<section aria-labelledby="borrowing-history-heading" class="min-w-0">
+    <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
+        <div>
+            <h2 id="borrowing-history-heading" class="font-display text-2xl font-semibold">Borrowing history</h2>
+            <p class="mt-1 text-xs text-gray-500">
+                @Model.TotalCount reservation record@(Model.TotalCount == 1 ? "" : "s") · times are Philippine time
+            </p>
+        </div>
+        <a asp-action="Export"
+           asp-route-search="@filter.Search"
+           asp-route-borrower="@filter.Borrower"
+           asp-route-item="@filter.Item"
+           asp-route-categoryId="@filter.CategoryId"
+           asp-route-fromDate="@fromDate"
+           asp-route-toDate="@toDate"
+           asp-route-status="@filter.Status"
+           asp-route-lateReturn="@filter.LateReturn"
+           class="btn-primary min-h-10">Download CSV</a>
+    </div>
+
+    <form method="get" asp-action="Index" class="mb-5 grid gap-3 border border-gray-200 bg-white p-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div>
+            <label for="history-search" class="mb-1 block text-xs font-medium text-gray-700">Search borrower, ID, or item</label>
+            <input id="history-search" name="Search" value="@filter.Search" type="search" maxlength="100" class="input" placeholder="Name, school ID, user code, item" />
+        </div>
+        <div>
+            <label for="history-item" class="mb-1 block text-xs font-medium text-gray-700">Filter by item</label>
+            <input id="history-item" name="Item" value="@filter.Item" type="search" maxlength="100" class="input" placeholder="Item name or code" />
+        </div>
+        <div>
+            <label for="history-category" class="mb-1 block text-xs font-medium text-gray-700">Category</label>
+            <select id="history-category" name="CategoryId" class="input">
+                <option value="">All categories</option>
+                @foreach (var category in Model.Categories)
+                {
+                    <option value="@category.CategoryId" selected="@(filter.CategoryId == category.CategoryId)">@category.CategoryName</option>
+                }
+            </select>
+        </div>
+        <div>
+            <label for="history-borrower" class="mb-1 block text-xs font-medium text-gray-700">Filter by borrower</label>
+            <input id="history-borrower" name="Borrower" value="@filter.Borrower" type="search" maxlength="100" class="input" placeholder="Name, school ID, or user code" />
+        </div>
+        <div>
+            <label for="history-from" class="mb-1 block text-xs font-medium text-gray-700">Borrowing start from</label>
+            <input id="history-from" name="FromDate" value="@fromDate" type="date" class="input" />
+        </div>
+        <div>
+            <label for="history-to" class="mb-1 block text-xs font-medium text-gray-700">Borrowing start to</label>
+            <input id="history-to" name="ToDate" value="@toDate" type="date" class="input" />
+        </div>
+        <div>
+            <label for="history-status" class="mb-1 block text-xs font-medium text-gray-700">Status</label>
+            <select id="history-status" name="Status" class="input">
+                <option value="">All statuses</option>
+                @foreach (var status in Model.StatusOptions)
+                {
+                    <option value="@status" selected="@(filter.Status == status)">@status</option>
+                }
+            </select>
+        </div>
+        <div>
+            <label for="history-late" class="mb-1 block text-xs font-medium text-gray-700">Late return</label>
+            <select id="history-late" name="LateReturn" class="input">
+                <option value="">Any</option>
+                <option value="yes" selected="@(filter.LateReturn == "yes")">Late returns only</option>
+                <option value="no" selected="@(filter.LateReturn == "no")">No late return / not yet returned</option>
+            </select>
+        </div>
+        <div class="flex items-end gap-2 sm:col-span-2 xl:col-span-4">
+            <button type="submit" class="btn-primary min-h-10">Apply filters</button>
+            <a asp-action="Index" class="inline-flex min-h-10 items-center border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-700">Clear</a>
+        </div>
+    </form>
+
+    <p class="mb-4 text-xs text-gray-500">Date filters use the requested borrowing start date. Late-return status is based on the recorded late-return event or an actual return after the scheduled due time.</p>
+
+    @if (!string.IsNullOrWhiteSpace(Model.ValidationMessage))
+    {
+        <div class="mb-5 border-l-4 border-ink bg-white px-4 py-3 text-sm" role="alert">@Model.ValidationMessage</div>
+    }
+
+    @if (Model.Items.Count == 0)
+    {
+        <partial name="Components/_EmptyState" model="@(new EmptyStateModel { Heading = "No borrowing history found", Message = "Try a different search or remove one or more filters." })" />
+    }
+    else
+    {
+        <div class="overflow-x-auto border border-gray-200 bg-white">
+            <table class="w-full min-w-[1050px] text-left text-sm">
+                <thead class="border-b border-gray-200 bg-gray-50 font-display text-[11px] uppercase tracking-[0.12em] text-gray-700">
+                    <tr>
+                        <th scope="col" class="px-3 py-3">Borrower</th>
+                        <th scope="col" class="px-3 py-3">Equipment</th>
+                        <th scope="col" class="px-3 py-3">Borrowing period</th>
+                        <th scope="col" class="px-3 py-3">Release / return</th>
+                        <th scope="col" class="px-3 py-3">Status</th>
+                        <th scope="col" class="px-3 py-3">Late return</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    @foreach (var row in Model.Items)
+                    {
+                        <tr class="align-top">
+                            <td class="px-3 py-3">
+                                <p class="font-semibold text-ink">@row.BorrowerName</p>
+                                <p class="mt-1 text-xs text-gray-500">@row.SchoolId · @row.UserCode</p>
+                            </td>
+                            <td class="px-3 py-3">
+                                <p class="font-semibold text-ink">@row.ItemName</p>
+                                <p class="mt-1 text-xs text-gray-500">@row.ItemCode · @row.CategoryName</p>
+                            </td>
+                            <td class="px-3 py-3 text-gray-700">
+                                <p>@row.StartLocal.ToString("ddd d MMM yyyy · HH:mm")</p>
+                                <p class="mt-1 text-xs text-gray-500">Due @row.DueLocal.ToString("ddd d MMM yyyy · HH:mm")</p>
+                                <p class="mt-1 text-xs text-gray-500">Requested @row.RequestedAtLocal.ToString("d MMM yyyy · HH:mm")</p>
+                            </td>
+                            <td class="px-3 py-3 text-gray-700">
+                                <p>Released: @(row.ReleasedAtLocal?.ToString("d MMM yyyy · HH:mm") ?? "—")</p>
+                                <p class="mt-1 text-xs text-gray-500">Returned: @(row.ReturnedAtLocal?.ToString("d MMM yyyy · HH:mm") ?? "—")</p>
+                                @if (!string.IsNullOrWhiteSpace(row.ReturnedCondition))
+                                {
+                                    <p class="mt-1 text-xs text-gray-500">Condition: @row.ReturnedCondition</p>
+                                }
+                            </td>
+                            <td class="px-3 py-3"><partial name="Components/_StatusBadge" model="row.Status" /></td>
+                            <td class="px-3 py-3">
+                                @if (row.HasLateReturn)
+                                {
+                                    <span class="inline-flex bg-ink px-2.5 py-1 text-[11px] font-medium text-white">Yes · @row.DaysLate day@(row.DaysLate == 1 ? "" : "s")</span>
+                                }
+                                else
+                                {
+                                    <span class="text-gray-500">No</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <nav class="mt-6 flex items-center justify-between text-xs text-gray-500" aria-label="Borrowing history pages">
+            <span>Page @Model.Page of @Model.TotalPages · @Model.TotalCount record@(Model.TotalCount == 1 ? "" : "s")</span>
+            <div class="flex gap-2">
+                @if (Model.Page > 1)
+                {
+                    <a asp-action="Index" asp-route-search="@filter.Search" asp-route-borrower="@filter.Borrower" asp-route-item="@filter.Item" asp-route-categoryId="@filter.CategoryId" asp-route-fromDate="@fromDate" asp-route-toDate="@toDate" asp-route-status="@filter.Status" asp-route-lateReturn="@filter.LateReturn" asp-route-page="@(Model.Page - 1)" class="border border-gray-200 bg-white px-3 py-2 text-gray-700">Previous</a>
+                }
+                @if (Model.Page < Model.TotalPages)
+                {
+                    <a asp-action="Index" asp-route-search="@filter.Search" asp-route-borrower="@filter.Borrower" asp-route-item="@filter.Item" asp-route-categoryId="@filter.CategoryId" asp-route-fromDate="@fromDate" asp-route-toDate="@toDate" asp-route-status="@filter.Status" asp-route-lateReturn="@filter.LateReturn" asp-route-page="@(Model.Page + 1)" class="border border-gray-200 bg-white px-3 py-2 text-gray-700">Next</a>
+                }
+            </div>
+        </nav>
+    }
+</section>

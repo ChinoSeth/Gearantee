@@ -1,0 +1,110 @@
+@model ASI.Basecode.Services.ServiceModels.AvailabilityCalendar.AvailabilityCalendarPageViewModel
+@using ASI.Basecode.Services.Utilities
+@{
+    var selectedDate = string.IsNullOrWhiteSpace(Model.Filter.Date)
+        ? ManilaClock.NowLocal.ToString("yyyy-MM-dd")
+        : Model.Filter.Date;
+    var selectedView = Model.Filter.View is "timeGridDay" or "timeGridWeek"
+        ? Model.Filter.View
+        : "timeGridWeek";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/lib/fullcalendar/skeleton.css" asp-append-version="true" />
+}
+
+<section aria-labelledby="availability-heading" class="min-w-0">
+    <div class="mb-5">
+        <p class="eyebrow">Reports</p>
+        <h1 id="availability-heading" class="mt-1 font-display text-3xl font-semibold text-ink">Availability calendar</h1>
+        <p class="mt-1 text-sm text-gray-500">Equipment schedule and booking availability · times are Philippine time (UTC+8)</p>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.ValidationMessage))
+    {
+        <div class="mb-5 border-l-4 border-ink bg-white px-4 py-3 text-sm" role="alert">@Model.ValidationMessage</div>
+    }
+
+    <form id="availability-filters" method="get" asp-controller="AvailabilityCalendar" asp-action="Index" class="mb-5 grid gap-3 border border-gray-200 bg-white p-4 sm:grid-cols-2 xl:grid-cols-4">
+        <input id="availability-date" type="hidden" name="Date" value="@selectedDate" />
+        <input id="availability-view" type="hidden" name="View" value="@selectedView" />
+        <div>
+            <label for="availability-category" class="mb-1 block text-xs font-medium text-gray-700">Category</label>
+            <select id="availability-category" name="CategoryId" class="input">
+                <option value="">All categories</option>
+                @foreach (var category in Model.Categories)
+                {
+                    <option value="@category.CategoryId" selected="@(Model.Filter.CategoryId == category.CategoryId)">@category.CategoryName</option>
+                }
+            </select>
+        </div>
+        <div>
+            <label for="availability-equipment" class="mb-1 block text-xs font-medium text-gray-700">Equipment item</label>
+            <select id="availability-equipment" name="EquipmentId" class="input">
+                <option value="">All equipment</option>
+                @foreach (var item in Model.Equipment)
+                {
+                    <option value="@item.EquipmentId"
+                            data-category="@item.CategoryId"
+                            data-location="@item.Location"
+                            selected="@(Model.Filter.EquipmentId == item.EquipmentId)">@item.ItemCode · @item.ItemName</option>
+                }
+            </select>
+        </div>
+        <div>
+            <label for="availability-location" class="mb-1 block text-xs font-medium text-gray-700">Location</label>
+            <select id="availability-location" name="Location" class="input">
+                <option value="">All locations</option>
+                @foreach (var location in Model.Locations)
+                {
+                    <option value="@location" selected="@(string.Equals(Model.Filter.Location, location, StringComparison.OrdinalIgnoreCase))">@location</option>
+                }
+            </select>
+        </div>
+        <div class="flex items-end gap-2">
+            <button type="submit" class="btn-primary min-h-10">Apply filters</button>
+            <a asp-controller="AvailabilityCalendar" asp-action="Index" class="inline-flex min-h-10 items-center border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-700">Clear</a>
+        </div>
+    </form>
+
+    @if (Model.CanCreateReservations)
+    {
+        <p id="availability-selection-hint" class="mb-4 border-l-4 border-primary bg-white px-4 py-3 text-sm text-gray-700" role="status">
+            Select an equipment item, then select an open time on the calendar to start a reservation.
+        </p>
+    }
+
+    <div class="mb-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-gray-700" aria-label="Calendar status legend">
+        <span class="inline-flex items-center gap-2"><span class="availability-legend-dot availability-legend-reserved" aria-hidden="true"></span>Reserved</span>
+        <span class="inline-flex items-center gap-2"><span class="availability-legend-dot availability-legend-borrowed" aria-hidden="true"></span>Borrowed</span>
+        <span class="inline-flex items-center gap-2"><span class="availability-legend-dot availability-legend-overdue" aria-hidden="true"></span>Overdue</span>
+        <span class="inline-flex items-center gap-2"><span class="availability-legend-dot availability-legend-open" aria-hidden="true"></span>Open time for the selected item</span>
+        <span class="text-gray-500">Maintenance and unavailable items appear in the equipment list; no maintenance end date is recorded.</span>
+    </div>
+
+    <div id="availability-error" class="mb-4 hidden border-l-4 border-ink bg-white px-4 py-3 text-sm" role="alert"></div>
+    <div class="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,0.32fr)]">
+        <div id="availability-calendar"
+             class="availability-calendar min-w-0 border border-gray-200 bg-white p-2 sm:p-4"
+             data-events-url="@Url.Action("Events", "AvailabilityCalendar")"
+             data-reservation-url="@Url.Action("Create", "Reservation")"
+             data-can-reserve="@Model.CanCreateReservations"
+             data-initial-date="@selectedDate"
+             data-initial-view="@selectedView"
+             data-today="@ManilaClock.NowLocal.ToString("yyyy-MM-dd")"></div>
+
+        <aside class="border border-gray-200 bg-white p-4" aria-labelledby="availability-items-heading">
+            <div class="mb-3 flex items-baseline justify-between gap-2">
+                <h2 id="availability-items-heading" class="font-display text-lg font-semibold text-ink">Equipment</h2>
+                <span id="availability-item-count" class="text-xs text-gray-500" aria-live="polite"></span>
+            </div>
+            <p id="availability-empty" class="hidden py-5 text-sm text-gray-500">No equipment matches these filters.</p>
+            <ul id="availability-items" class="divide-y divide-gray-200" aria-live="polite"></ul>
+        </aside>
+    </div>
+</section>
+
+@section Scripts {
+    <script src="~/lib/fullcalendar/all.global.js" asp-append-version="true"></script>
+    <script src="~/js/availability-calendar.js" asp-append-version="true"></script>
+}

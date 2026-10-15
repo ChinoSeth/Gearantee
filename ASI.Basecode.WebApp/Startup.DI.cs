@@ -46,6 +46,7 @@ namespace ASI.Basecode.WebApp
 
             _services.AddScoped<ICategoryService, CategoryService>();
             _services.AddScoped<IEquipmentItemService, EquipmentItemService>();
+            _services.AddScoped<IAvailabilityCalendarService, AvailabilityCalendarService>();
 
             // Repositories
             _services.AddScoped<IEquipmentItemRepository, EquipmentItemRepository>();
@@ -55,6 +56,7 @@ namespace ASI.Basecode.WebApp
             // Services
             _services.AddScoped<ICatalogService, CatalogService>();
             _services.AddScoped<IReservationService, ReservationService>();
+            _services.AddScoped<IBorrowingHistoryService, BorrowingHistoryService>();
         }
     }
 }
