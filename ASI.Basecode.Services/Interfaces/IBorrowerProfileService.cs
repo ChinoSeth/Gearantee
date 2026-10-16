@@ -8,7 +8,7 @@ namespace ASI.Basecode.Services.Interfaces
     {
         Task<List<BorrowerProfileViewModel>> GetBorrowerProfilesAsync();
         Task<BorrowerProfileViewModel> GetBorrowerProfileAsync(long id);
-        Task<bool> UpdateBorrowerProfileAsync(long id, BorrowerProfileUpdateViewModel model);
-        Task<bool> UpdateEligibilityAsync(long id, bool isEligible);
+        Task<BorrowerProfileResult> UpdateBorrowerProfileAsync(long id, BorrowerProfileUpdateViewModel model);
+        Task<BorrowerProfileResult> UpdateEligibilityAsync(long id, bool isEligible);
     }
 }

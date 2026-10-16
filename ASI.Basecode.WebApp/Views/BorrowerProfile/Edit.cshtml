@@ -34,6 +34,7 @@
         <form asp-action="Edit" method="post" class="mt-6">
             <div asp-validation-summary="ModelOnly" class="validation-summary-errors" role="alert"></div>
             <input type="hidden" name="id" value="@borrowerProfileId" />
+            <input type="hidden" name="ConcurrencyStamp" value="@Model.ConcurrencyStamp" />
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
                     <label asp-for="Department" class="mb-1 block text-sm font-medium"></label>

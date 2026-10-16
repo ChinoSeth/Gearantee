@@ -45,17 +45,14 @@ namespace ASI.Basecode.WebApp.Controllers
                 return NotFound();
             }
 
-            ViewData["BorrowerProfileId"] = borrower.BorrowerProfileId;
-            ViewData["SchoolId"] = borrower.SchoolId;
-            ViewData["BorrowerName"] = borrower.BorrowerName;
-            ViewData["IsEligible"] = borrower.IsEligible;
+            LoadBorrowerDisplay(borrower);
 
-            var model = new BorrowerProfileUpdateViewModel
+            return View(new BorrowerProfileUpdateViewModel
             {
                 Department = borrower.Department,
-                ContactNumber = borrower.ContactNumber
-            };
-            return View(model);
+                ContactNumber = borrower.ContactNumber,
+                ConcurrencyStamp = borrower.ConcurrencyStamp
+            });
         }
 
         [HttpPost]
@@ -69,12 +66,26 @@ namespace ASI.Basecode.WebApp.Controllers
                 ViewData["SchoolId"] = borrower?.SchoolId;
                 ViewData["BorrowerName"] = borrower?.BorrowerName;
                 ViewData["IsEligible"] = borrower?.IsEligible ?? false;
+
+                // The posted stamp is kept so the corrected form can still be saved.
                 return View(model);
             }
 
-            var updated = await _borrowerProfileService.UpdateBorrowerProfileAsync(id, model);
-            TempData[updated ? "SuccessMessage" : "ErrorMessage"] =
-                updated ? "Borrower record updated successfully." : "Borrower record not found.";
+            var result = await _borrowerProfileService.UpdateBorrowerProfileAsync(id, model);
+            if (result.Succeeded)
+            {
+                TempData["SuccessMessage"] = result.Message;
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (result.IsStale)
+            {
+                // Reload the current values rather than overwriting the other administrator's save.
+                TempData["ErrorMessage"] = result.Message;
+                return RedirectToAction(nameof(Edit), new { id });
+            }
+
+            TempData["ErrorMessage"] = result.Message;
             return RedirectToAction(nameof(Index));
         }
 
@@ -82,11 +93,17 @@ namespace ASI.Basecode.WebApp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateEligibility(long id, bool isEligible)
         {
-            var updated = await _borrowerProfileService.UpdateEligibilityAsync(id, isEligible);
-            TempData[updated ? "SuccessMessage" : "ErrorMessage"] = updated
-                ? (isEligible ? "Borrower marked as eligible." : "Borrower marked as ineligible.")
-                : "Borrower record not found.";
+            var result = await _borrowerProfileService.UpdateEligibilityAsync(id, isEligible);
+            TempData[result.Succeeded ? "SuccessMessage" : "ErrorMessage"] = result.Message;
             return RedirectToAction(nameof(Index));
+        }
+
+        private void LoadBorrowerDisplay(BorrowerProfileViewModel borrower)
+        {
+            ViewData["BorrowerProfileId"] = borrower.BorrowerProfileId;
+            ViewData["SchoolId"] = borrower.SchoolId;
+            ViewData["BorrowerName"] = borrower.BorrowerName;
+            ViewData["IsEligible"] = borrower.IsEligible;
         }
     }
 }

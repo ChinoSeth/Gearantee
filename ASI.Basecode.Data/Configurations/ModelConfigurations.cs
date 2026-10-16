@@ -115,6 +115,10 @@ namespace ASI.Basecode.Data.Configurations
             builder.Property(x => x.Department).HasMaxLength(200).IsRequired();
             builder.Property(x => x.ContactNumber).HasMaxLength(50);
             builder.Property(x => x.IsEligible).HasDefaultValue(false);
+            builder.Property(x => x.ConcurrencyStamp)
+                .HasMaxLength(64)
+                .IsRequired()
+                .IsConcurrencyToken();
             ConfigureAuditDates(builder);
 
             builder.HasIndex(x => x.UserId).IsUnique();

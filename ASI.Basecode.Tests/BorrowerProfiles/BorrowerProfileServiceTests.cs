@@ -12,15 +12,17 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Xunit;
 
 namespace ASI.Basecode.Tests.BorrowerProfiles
 {
     /// <summary>
-    /// Regression tests for WBS 30.00 (view borrower's records) and WBS 31.00
-    /// (update borrower's records). The service is deliberately exercised against the
-    /// real production model on SQLite, the same way CategoryServiceTests does.
+    /// Regression tests for WBS 30.00–32.00. The service is exercised against the real
+    /// production model on SQLite, the same way CategoryServiceTests does, and the write paths
+    /// are asserted through AsNoTracking reloads so they prove persistence rather than
+    /// in-memory mutation.
     /// </summary>
     public class BorrowerProfileServiceTests
     {
@@ -48,6 +50,9 @@ namespace ASI.Basecode.Tests.BorrowerProfiles
 
             Assert.True(profiles[1].IsEligible);
             Assert.Null(profiles[2].ContactNumber);
+
+            // Every row carries the version token the edit form needs.
+            Assert.All(profiles, profile => Assert.False(string.IsNullOrWhiteSpace(profile.ConcurrencyStamp)));
         }
 
         [Fact]
@@ -66,7 +71,7 @@ namespace ASI.Basecode.Tests.BorrowerProfiles
         }
 
         [Fact]
-        public async Task GetBorrowerProfileAsync_ReturnsTheMatchingProfile()
+        public async Task GetBorrowerProfileAsync_ReturnsTheMatchingProfileWithItsStamp()
         {
             using var database = new SqliteDb();
             using var provider = CreateProvider(database);
@@ -83,6 +88,7 @@ namespace ASI.Basecode.Tests.BorrowerProfiles
             Assert.Equal("College of Business", profile.Department);
             Assert.Equal("0917-200-2000", profile.ContactNumber);
             Assert.False(profile.IsEligible);
+            Assert.Equal(seeded.Profile.ConcurrencyStamp, profile.ConcurrencyStamp);
         }
 
         [Fact]
@@ -97,7 +103,7 @@ namespace ASI.Basecode.Tests.BorrowerProfiles
         }
 
         [Fact]
-        public async Task UpdateBorrowerProfileAsync_ChangesOnlyDepartmentAndContactNumber()
+        public async Task UpdateBorrowerProfileAsync_ChangesOnlyDepartmentAndContactNumberAndRotatesTheStamp()
         {
             using var database = new SqliteDb();
             using var provider = CreateProvider(database);
@@ -106,21 +112,23 @@ namespace ASI.Basecode.Tests.BorrowerProfiles
             var service = scope.ServiceProvider.GetRequiredService<IBorrowerProfileService>();
 
             var seeded = await SeedProfileAsync(scope, "S-300", "Liza", "Mendoza", "College of Nursing", "0917-300-3000", isEligible: true);
+            var stampBefore = seeded.Profile.ConcurrencyStamp;
 
             var originalStamp = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc);
             seeded.Profile.CreatedAt = originalStamp;
             seeded.Profile.UpdatedAt = originalStamp;
             await db.SaveChangesAsync();
 
-            var updated = await service.UpdateBorrowerProfileAsync(
+            var result = await service.UpdateBorrowerProfileAsync(
                 seeded.Profile.BorrowerProfileId,
                 new BorrowerProfileUpdateViewModel
                 {
-                    Department = "College of Allied Health",
-                    ContactNumber = "0917-333-3333"
+                    Department = "  College of Allied Health  ",
+                    ContactNumber = "  0917-333-3333  ",
+                    ConcurrencyStamp = stampBefore
                 });
 
-            Assert.True(updated);
+            Assert.True(result.Succeeded, result.Message);
 
             var stored = await db.BorrowerProfiles
                 .AsNoTracking()
@@ -135,10 +143,83 @@ namespace ASI.Basecode.Tests.BorrowerProfiles
             Assert.True(stored.IsEligible);
             Assert.Equal(originalStamp, stored.CreatedAt);
             Assert.True(stored.UpdatedAt > originalStamp);
+
+            // The version moves on so the form that was just saved cannot be replayed.
+            Assert.NotEqual(stampBefore, stored.ConcurrencyStamp);
+        }
+
+        /// <summary>
+        /// The regression test the review asked for: two forms open on the same row, the first
+        /// saves, the second must be rejected rather than overwriting the first.
+        /// </summary>
+        [Fact]
+        public async Task UpdateBorrowerProfileAsync_SecondStaleSubmissionIsRejectedAndTheFirstValueSurvives()
+        {
+            using var database = new SqliteDb();
+            using var provider = CreateProvider(database);
+            await using var scope = provider.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<AsiBasecodeDBContext>();
+            var service = scope.ServiceProvider.GetRequiredService<IBorrowerProfileService>();
+
+            var seeded = await SeedProfileAsync(scope, "S-350", "Rosa", "Lim", "College of Nursing", "0917-350-3500", isEligible: true);
+
+            // Both administrators opened the edit form before either saved, so both hold the
+            // same stamp — exactly what the rendered hidden field carries.
+            var stampAsRendered = seeded.Profile.ConcurrencyStamp;
+            var firstAdministrator = new BorrowerProfileUpdateViewModel
+            {
+                Department = "College of Nursing",
+                ContactNumber = "0917-111-1111",
+                ConcurrencyStamp = stampAsRendered
+            };
+            var secondAdministrator = new BorrowerProfileUpdateViewModel
+            {
+                Department = "College of Nursing",
+                ContactNumber = "0917-999-9999",
+                ConcurrencyStamp = stampAsRendered
+            };
+
+            var firstResult = await service.UpdateBorrowerProfileAsync(seeded.Profile.BorrowerProfileId, firstAdministrator);
+            Assert.True(firstResult.Succeeded, firstResult.Message);
+
+            var secondResult = await service.UpdateBorrowerProfileAsync(seeded.Profile.BorrowerProfileId, secondAdministrator);
+
+            Assert.False(secondResult.Succeeded);
+            Assert.True(secondResult.IsStale);
+            Assert.Contains("changed", secondResult.Message, StringComparison.OrdinalIgnoreCase);
+
+            var stored = await db.BorrowerProfiles
+                .AsNoTracking()
+                .SingleAsync(item => item.BorrowerProfileId == seeded.Profile.BorrowerProfileId);
+
+            // The first save is intact — the stale form did not silently win.
+            Assert.Equal("0917-111-1111", stored.ContactNumber);
         }
 
         [Fact]
-        public async Task UpdateBorrowerProfileAsync_UnknownId_ReturnsFalseAndChangesNothing()
+        public async Task UpdateBorrowerProfileAsync_MissingStampIsRejected()
+        {
+            using var database = new SqliteDb();
+            using var provider = CreateProvider(database);
+            await using var scope = provider.CreateAsyncScope();
+            var service = scope.ServiceProvider.GetRequiredService<IBorrowerProfileService>();
+
+            var seeded = await SeedProfileAsync(scope, "S-360", "Ben", "Cruz", "College of Arts", "0917-360-3600", isEligible: true);
+
+            var result = await service.UpdateBorrowerProfileAsync(
+                seeded.Profile.BorrowerProfileId,
+                new BorrowerProfileUpdateViewModel
+                {
+                    Department = "College of Arts",
+                    ContactNumber = "0917-000-0000",
+                    ConcurrencyStamp = null
+                });
+
+            Assert.True(result.IsStale);
+        }
+
+        [Fact]
+        public async Task UpdateBorrowerProfileAsync_UnknownId_ReturnsMissingAndChangesNothing()
         {
             using var database = new SqliteDb();
             using var provider = CreateProvider(database);
@@ -148,19 +229,43 @@ namespace ASI.Basecode.Tests.BorrowerProfiles
 
             var seeded = await SeedProfileAsync(scope, "S-400", "Noel", "Bautista", "College of Nursing", "0917-400-4000", isEligible: false);
 
-            var updated = await service.UpdateBorrowerProfileAsync(
+            var result = await service.UpdateBorrowerProfileAsync(
                 seeded.Profile.BorrowerProfileId + 5_000,
                 new BorrowerProfileUpdateViewModel
                 {
                     Department = "Should not be written",
-                    ContactNumber = "0999-999-9999"
+                    ContactNumber = "0999-999-9999",
+                    ConcurrencyStamp = seeded.Profile.ConcurrencyStamp
                 });
 
-            Assert.False(updated);
+            Assert.True(result.IsMissing);
 
             var stored = await db.BorrowerProfiles.AsNoTracking().SingleAsync();
             Assert.Equal("College of Nursing", stored.Department);
             Assert.Equal("0917-400-4000", stored.ContactNumber);
+        }
+
+        [Fact]
+        public async Task UpdateBorrowerProfileAsync_BlankDepartment_IsRejected()
+        {
+            using var database = new SqliteDb();
+            using var provider = CreateProvider(database);
+            await using var scope = provider.CreateAsyncScope();
+            var service = scope.ServiceProvider.GetRequiredService<IBorrowerProfileService>();
+
+            var seeded = await SeedProfileAsync(scope, "S-410", "Mila", "Ramos", "College of Arts", null, isEligible: true);
+
+            var result = await service.UpdateBorrowerProfileAsync(
+                seeded.Profile.BorrowerProfileId,
+                new BorrowerProfileUpdateViewModel
+                {
+                    Department = "   ",
+                    ContactNumber = null,
+                    ConcurrencyStamp = seeded.Profile.ConcurrencyStamp
+                });
+
+            Assert.False(result.Succeeded);
+            Assert.False(result.IsStale);
         }
 
         [Fact]
@@ -174,7 +279,8 @@ namespace ASI.Basecode.Tests.BorrowerProfiles
 
             var seeded = await SeedProfileAsync(scope, "S-500", "Grace", "Villamor", "College of Education", "0917-500-5000", isEligible: true);
 
-            Assert.True(await service.UpdateEligibilityAsync(seeded.Profile.BorrowerProfileId, false));
+            var result = await service.UpdateEligibilityAsync(seeded.Profile.BorrowerProfileId, false);
+            Assert.True(result.Succeeded, result.Message);
 
             var stored = await db.BorrowerProfiles.AsNoTracking().SingleAsync();
             Assert.False(stored.IsEligible);
@@ -182,21 +288,70 @@ namespace ASI.Basecode.Tests.BorrowerProfiles
             Assert.Equal("0917-500-5000", stored.ContactNumber);
             Assert.Equal("S-500", stored.SchoolId);
 
-            Assert.True(await service.UpdateEligibilityAsync(seeded.Profile.BorrowerProfileId, true));
+            result = await service.UpdateEligibilityAsync(seeded.Profile.BorrowerProfileId, true);
+            Assert.True(result.Succeeded, result.Message);
 
             stored = await db.BorrowerProfiles.AsNoTracking().SingleAsync();
             Assert.True(stored.IsEligible);
         }
 
         [Fact]
-        public async Task UpdateEligibilityAsync_UnknownId_ReturnsFalse()
+        public async Task UpdateEligibilityAsync_AlreadyInRequestedState_IsANoOp()
         {
             using var database = new SqliteDb();
             using var provider = CreateProvider(database);
             await using var scope = provider.CreateAsyncScope();
             var service = scope.ServiceProvider.GetRequiredService<IBorrowerProfileService>();
 
-            Assert.False(await service.UpdateEligibilityAsync(999_999, false));
+            var seeded = await SeedProfileAsync(scope, "S-510", "Rico", "Diaz", "College of Arts", null, isEligible: true);
+            var stampBefore = seeded.Profile.ConcurrencyStamp;
+
+            var result = await service.UpdateEligibilityAsync(seeded.Profile.BorrowerProfileId, true);
+
+            Assert.True(result.Succeeded, result.Message);
+            Assert.Contains("already", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(stampBefore, seeded.Profile.ConcurrencyStamp);
+        }
+
+        /// <summary>
+        /// An eligibility change is a write to the row, so an edit form opened beforehand must
+        /// not be able to save over it either.
+        /// </summary>
+        [Fact]
+        public async Task UpdateEligibilityAsync_RotatesTheStampSoAnOpenEditFormIsRejected()
+        {
+            using var database = new SqliteDb();
+            using var provider = CreateProvider(database);
+            await using var scope = provider.CreateAsyncScope();
+            var service = scope.ServiceProvider.GetRequiredService<IBorrowerProfileService>();
+
+            var seeded = await SeedProfileAsync(scope, "S-520", "Ella", "Torres", "College of Nursing", "0917-520-5200", isEligible: true);
+
+            var formOpenedBefore = new BorrowerProfileUpdateViewModel
+            {
+                Department = "College of Nursing",
+                ContactNumber = "0917-000-0000",
+                ConcurrencyStamp = seeded.Profile.ConcurrencyStamp
+            };
+
+            Assert.True((await service.UpdateEligibilityAsync(seeded.Profile.BorrowerProfileId, false)).Succeeded);
+
+            var result = await service.UpdateBorrowerProfileAsync(seeded.Profile.BorrowerProfileId, formOpenedBefore);
+
+            Assert.True(result.IsStale);
+        }
+
+        [Fact]
+        public async Task UpdateEligibilityAsync_UnknownId_ReturnsMissing()
+        {
+            using var database = new SqliteDb();
+            using var provider = CreateProvider(database);
+            await using var scope = provider.CreateAsyncScope();
+            var service = scope.ServiceProvider.GetRequiredService<IBorrowerProfileService>();
+
+            var result = await service.UpdateEligibilityAsync(999_999, false);
+
+            Assert.True(result.IsMissing);
         }
 
         [Fact]
@@ -226,6 +381,49 @@ namespace ASI.Basecode.Tests.BorrowerProfiles
             Assert.True(Validator.TryValidateObject(
                 valid,
                 new ValidationContext(valid),
+                results,
+                validateAllProperties: true));
+        }
+
+        [Fact]
+        public void UpdateViewModel_EnforcesTheSqlColumnLengths()
+        {
+            var department = typeof(BorrowerProfileUpdateViewModel)
+                .GetProperty(nameof(BorrowerProfileUpdateViewModel.Department))
+                .GetCustomAttribute<StringLengthAttribute>();
+            var contactNumber = typeof(BorrowerProfileUpdateViewModel)
+                .GetProperty(nameof(BorrowerProfileUpdateViewModel.ContactNumber))
+                .GetCustomAttribute<StringLengthAttribute>();
+
+            Assert.NotNull(department);
+            Assert.Equal(200, department.MaximumLength);
+            Assert.NotNull(contactNumber);
+            Assert.Equal(50, contactNumber.MaximumLength);
+        }
+
+        [Fact]
+        public void UpdateViewModel_RejectsADepartmentLongerThanTheColumn()
+        {
+            var results = new List<ValidationResult>();
+            var model = new BorrowerProfileUpdateViewModel
+            {
+                Department = new string('a', 201),
+                ContactNumber = null
+            };
+
+            Assert.False(Validator.TryValidateObject(
+                model,
+                new ValidationContext(model),
+                results,
+                validateAllProperties: true));
+            Assert.Contains(results, result => result.MemberNames.Contains(nameof(BorrowerProfileUpdateViewModel.Department)));
+
+            results.Clear();
+            model.Department = new string('a', 200);
+
+            Assert.True(Validator.TryValidateObject(
+                model,
+                new ValidationContext(model),
                 results,
                 validateAllProperties: true));
         }
