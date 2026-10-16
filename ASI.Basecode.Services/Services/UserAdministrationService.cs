@@ -18,7 +18,7 @@ namespace ASI.Basecode.Services.Services
     public partial class UserAdministrationService : IUserAdministrationService
     {
         private const int PageSize = 10;
-        private const string AdministrationLockName = "Gearantee.UserAdministration";
+        private const string AdministrationLockName = ASI.Basecode.Services.Utilities.AdministrationLock.ResourceName;
 
         private static readonly IReadOnlyDictionary<string, string> PermissionLabels =
             new Dictionary<string, string>

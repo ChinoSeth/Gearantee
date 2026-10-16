@@ -2,12 +2,16 @@ using ASI.Basecode.Data;
 using ASI.Basecode.Data.Models;
 using ASI.Basecode.Services.Interfaces;
 using ASI.Basecode.Services.ServiceModels;
+using ASI.Basecode.Services.Utilities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace ASI.Basecode.Services.Services
@@ -18,6 +22,15 @@ namespace ASI.Basecode.Services.Services
 
         private const string StaleMessage =
             "This borrower record changed after you opened it. Reload the page and try again.";
+
+        private const string DeniedMessage =
+            "You no longer have permission to maintain borrower profiles. Reload the page and try again.";
+
+        private const string AuditFailureMessage =
+            "The change could not be recorded in the audit trail, so nothing was saved.";
+
+        private const string ProfileUpdatedAction = "BorrowerProfileUpdated";
+        private const string EligibilityChangedAction = "BorrowerEligibilityChanged";
 
         private readonly AsiBasecodeDBContext _db;
         private readonly UserManager<ApplicationUser> _userManager;
@@ -75,6 +88,7 @@ namespace ASI.Basecode.Services.Services
         }
 
         public async Task<BorrowerProfileResult> UpdateBorrowerProfileAsync(
+            string actorUserId,
             long id,
             BorrowerProfileUpdateViewModel model)
         {
@@ -89,10 +103,20 @@ namespace ASI.Basecode.Services.Services
                 return BorrowerProfileResult.Failure("Department is required.");
             }
 
+            // The authorization check runs inside the same serialized transaction as the write,
+            // so a permission revocation cannot land between the check and the commit.
+            await using var transaction = await BeginAdministrativeWriteAsync();
+            if (!await CanManageAsync(actorUserId))
+            {
+                await transaction.RollbackAsync();
+                return BorrowerProfileResult.Denied(DeniedMessage);
+            }
+
             var profile = await _db.BorrowerProfiles
                 .SingleOrDefaultAsync(item => item.BorrowerProfileId == id);
             if (profile == null)
             {
+                await transaction.RollbackAsync();
                 return BorrowerProfileResult.Missing("Borrower record not found.");
             }
 
@@ -101,31 +125,62 @@ namespace ASI.Basecode.Services.Services
             // saved would silently overwrite the newer values.
             if (!IsCurrent(profile, model.ConcurrencyStamp))
             {
+                await transaction.RollbackAsync();
                 return BorrowerProfileResult.Stale(StaleMessage);
             }
 
-            profile.Department = model.Department.Trim();
-            profile.ContactNumber = string.IsNullOrWhiteSpace(model.ContactNumber)
-                ? null
-                : model.ContactNumber.Trim();
+            var before = new
+            {
+                profile.Department,
+                profile.ContactNumber
+            };
+            var after = new
+            {
+                Department = model.Department.Trim(),
+                ContactNumber = string.IsNullOrWhiteSpace(model.ContactNumber)
+                    ? null
+                    : model.ContactNumber.Trim()
+            };
+
+            profile.Department = after.Department;
+            profile.ContactNumber = after.ContactNumber;
             profile.ConcurrencyStamp = NewStamp();
             profile.UpdatedAt = DateTime.UtcNow;
 
-            if (!await TrySaveAsync())
+            AddAudit(
+                actorUserId,
+                profile.UserId,
+                ProfileUpdatedAction,
+                new { Before = before, After = after });
+
+            var failure = await TrySaveAsync(transaction);
+            if (failure != null)
             {
-                return BorrowerProfileResult.Stale(StaleMessage);
+                return failure;
             }
 
             await RefreshSignInClaimsAsync(profile);
+            await transaction.CommitAsync();
             return BorrowerProfileResult.Success("Borrower record updated successfully.");
         }
 
-        public async Task<BorrowerProfileResult> UpdateEligibilityAsync(long id, bool isEligible)
+        public async Task<BorrowerProfileResult> UpdateEligibilityAsync(
+            string actorUserId,
+            long id,
+            bool isEligible)
         {
+            await using var transaction = await BeginAdministrativeWriteAsync();
+            if (!await CanManageAsync(actorUserId))
+            {
+                await transaction.RollbackAsync();
+                return BorrowerProfileResult.Denied(DeniedMessage);
+            }
+
             var profile = await _db.BorrowerProfiles
                 .SingleOrDefaultAsync(item => item.BorrowerProfileId == id);
             if (profile == null)
             {
+                await transaction.RollbackAsync();
                 return BorrowerProfileResult.Missing("Borrower record not found.");
             }
 
@@ -133,21 +188,35 @@ namespace ASI.Basecode.Services.Services
             // already in place and reports that instead of writing again.
             if (profile.IsEligible == isEligible)
             {
+                await transaction.CommitAsync();
                 return BorrowerProfileResult.Success(
                     isEligible
                         ? "Borrower is already marked eligible."
                         : "Borrower is already marked ineligible.");
             }
 
+            var before = profile.IsEligible;
             profile.IsEligible = isEligible;
             profile.ConcurrencyStamp = NewStamp();
             profile.UpdatedAt = DateTime.UtcNow;
 
-            if (!await TrySaveAsync())
+            AddAudit(
+                actorUserId,
+                profile.UserId,
+                EligibilityChangedAction,
+                new
+                {
+                    Before = new { IsEligible = before },
+                    After = new { IsEligible = isEligible }
+                });
+
+            var failure = await TrySaveAsync(transaction);
+            if (failure != null)
             {
-                return BorrowerProfileResult.Stale(StaleMessage);
+                return failure;
             }
 
+            await transaction.CommitAsync();
             return BorrowerProfileResult.Success(
                 isEligible
                     ? "Borrower marked as eligible."
@@ -177,18 +246,102 @@ namespace ASI.Basecode.Services.Services
 
         private static string NewStamp() => Guid.NewGuid().ToString();
 
-        private async Task<bool> TrySaveAsync()
+        /// <summary>
+        /// Database-backed authorization for administrative writes. The controller also requires
+        /// the Administrator role and the borrower.manage policy, but that policy is evaluated
+        /// against the sign-in cookie, and those claims are not refreshed when a role's
+        /// permissions change. Re-reading the grant here means a revoked permission - or a
+        /// deactivated or demoted administrator - cannot authorize a write.
+        /// This mirrors CategoryService.CanManageAsync.
+        /// </summary>
+        private async Task<bool> CanManageAsync(string actorUserId)
+        {
+            if (string.IsNullOrWhiteSpace(actorUserId))
+            {
+                return false;
+            }
+
+            var actor = await _db.Users
+                .AsNoTracking()
+                .SingleOrDefaultAsync(user => user.Id == actorUserId);
+            if (actor == null || !actor.IsActive)
+            {
+                return false;
+            }
+
+            return await (
+                from userRole in _db.UserRoles.AsNoTracking()
+                join role in _db.Roles.AsNoTracking() on userRole.RoleId equals role.Id
+                join rolePermission in _db.RolePermissions.AsNoTracking()
+                    on role.Id equals rolePermission.RoleId
+                join permission in _db.Permissions.AsNoTracking()
+                    on rolePermission.PermissionId equals permission.PermissionId
+                where userRole.UserId == actorUserId &&
+                      role.Name == DomainValues.Roles.Administrator &&
+                      permission.PermissionName == DomainValues.Permissions.BorrowerManage
+                select permission.PermissionId)
+                .AnyAsync();
+        }
+
+        /// <summary>
+        /// Opens a serializable transaction and, on SQL Server, takes the shared administrative
+        /// application lock. Permission changes take the same lock, so a revocation is either
+        /// visible to <see cref="CanManageAsync"/> or blocked until this write commits.
+        /// </summary>
+        private async Task<IDbContextTransaction> BeginAdministrativeWriteAsync()
+        {
+            var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+            if (_db.Database.IsSqlServer())
+            {
+                await _db.Database.ExecuteSqlInterpolatedAsync(
+                    $@"DECLARE @lockResult int;
+EXEC @lockResult = sys.sp_getapplock
+    @Resource = {AdministrationLock.ResourceName},
+    @LockMode = 'Exclusive',
+    @LockOwner = 'Transaction',
+    @LockTimeout = 15000;
+IF @lockResult < 0 THROW 51000, 'Could not acquire the administrative write lock.', 1;");
+            }
+
+            return transaction;
+        }
+
+        /// <summary>
+        /// Persists the profile mutation and its audit event together. Returns a result to hand
+        /// back on failure, or null when the save succeeded.
+        /// </summary>
+        private async Task<BorrowerProfileResult> TrySaveAsync(IDbContextTransaction transaction)
         {
             try
             {
                 await _db.SaveChangesAsync();
-                return true;
+                return null;
             }
             catch (DbUpdateConcurrencyException)
             {
                 // Two administrators saved in the same instant: the token is the tie-breaker.
-                return false;
+                await transaction.RollbackAsync();
+                return BorrowerProfileResult.Stale(StaleMessage);
             }
+            catch (DbUpdateException)
+            {
+                // The mutation and its audit record are one unit of work; if the audit cannot be
+                // written, the profile change must not survive either.
+                await transaction.RollbackAsync();
+                return BorrowerProfileResult.Failure(AuditFailureMessage);
+            }
+        }
+
+        private void AddAudit(string actorUserId, string targetUserId, string action, object details)
+        {
+            _db.AdministrationAuditEvents.Add(new AdministrationAuditEvent
+            {
+                ActorUserId = actorUserId,
+                TargetUserId = targetUserId,
+                Action = action,
+                DetailsJson = JsonSerializer.Serialize(details),
+                OccurredAt = DateTime.UtcNow
+            });
         }
 
         /// <summary>

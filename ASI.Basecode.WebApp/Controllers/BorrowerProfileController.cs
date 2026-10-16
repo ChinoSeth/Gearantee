@@ -71,7 +71,7 @@ namespace ASI.Basecode.WebApp.Controllers
                 return View(model);
             }
 
-            var result = await _borrowerProfileService.UpdateBorrowerProfileAsync(id, model);
+            var result = await _borrowerProfileService.UpdateBorrowerProfileAsync(UserId, id, model);
             if (result.Succeeded)
             {
                 TempData["SuccessMessage"] = result.Message;
@@ -93,7 +93,7 @@ namespace ASI.Basecode.WebApp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateEligibility(long id, bool isEligible)
         {
-            var result = await _borrowerProfileService.UpdateEligibilityAsync(id, isEligible);
+            var result = await _borrowerProfileService.UpdateEligibilityAsync(UserId, id, isEligible);
             TempData[result.Succeeded ? "SuccessMessage" : "ErrorMessage"] = result.Message;
             return RedirectToAction(nameof(Index));
         }

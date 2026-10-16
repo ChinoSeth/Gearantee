@@ -4,6 +4,7 @@ using ASI.Basecode.Services.Interfaces;
 using ASI.Basecode.Services.ServiceModels;
 using ASI.Basecode.Services.ServiceModels.UserAdministration;
 using ASI.Basecode.Tests.UserAdministration;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -28,6 +29,9 @@ namespace ASI.Basecode.Tests.BorrowerProfiles
             var administration = scope.ServiceProvider.GetRequiredService<IUserAdministrationService>();
             var borrowers = scope.ServiceProvider.GetRequiredService<IBorrowerProfileService>();
 
+            // The borrower write path now re-reads the grant, so the actor needs it in the database.
+            await GrantBorrowerManageAsync(scope);
+
             var borrowerUserId = await CreateBorrowerAsync(
                 db, administration, environment.ActorId, "BRW-X1", "0917-100-1000");
 
@@ -42,6 +46,7 @@ namespace ASI.Basecode.Tests.BorrowerProfiles
                 .SingleAsync(item => item.UserId == borrowerUserId);
 
             var borrowerSave = await borrowers.UpdateBorrowerProfileAsync(
+                environment.ActorId,
                 profile.BorrowerProfileId,
                 new BorrowerProfileUpdateViewModel
                 {
@@ -76,6 +81,8 @@ namespace ASI.Basecode.Tests.BorrowerProfiles
             var administration = scope.ServiceProvider.GetRequiredService<IUserAdministrationService>();
             var borrowers = scope.ServiceProvider.GetRequiredService<IBorrowerProfileService>();
 
+            await GrantBorrowerManageAsync(scope);
+
             var borrowerUserId = await CreateBorrowerAsync(
                 db, administration, environment.ActorId, "BRW-X2", "0917-200-2000");
 
@@ -100,7 +107,7 @@ namespace ASI.Basecode.Tests.BorrowerProfiles
             // The stale borrower form must now be rejected rather than overwriting that save.
             formAsRendered.ContactNumber = "0917-222-2222";
             var staleSubmit = await borrowers.UpdateBorrowerProfileAsync(
-                profile.BorrowerProfileId, formAsRendered);
+                environment.ActorId, profile.BorrowerProfileId, formAsRendered);
 
             Assert.False(staleSubmit.Succeeded);
             Assert.True(staleSubmit.IsStale);
@@ -113,6 +120,7 @@ namespace ASI.Basecode.Tests.BorrowerProfiles
             // And a form loaded after the account save still saves normally - the guard is not blanket.
             var reloaded = await borrowers.GetBorrowerProfileAsync(profile.BorrowerProfileId);
             var freshSave = await borrowers.UpdateBorrowerProfileAsync(
+                environment.ActorId,
                 profile.BorrowerProfileId,
                 new BorrowerProfileUpdateViewModel
                 {
@@ -151,6 +159,43 @@ namespace ASI.Basecode.Tests.BorrowerProfiles
                 .SingleAsync(item => item.UserCode == userCode);
 
             return user.Id;
+        }
+
+        /// <summary>
+        /// AdministrationTestEnvironment grants only user_role.manage. The borrower write path
+        /// re-reads borrower.manage from the database, so the acting administrator needs it here.
+        /// </summary>
+        private static async Task GrantBorrowerManageAsync(AsyncServiceScope scope)
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AsiBasecodeDBContext>();
+            var roles = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+            var adminRole = await roles.FindByNameAsync(DomainValues.Roles.Administrator);
+            Assert.NotNull(adminRole);
+
+            var permission = await db.Permissions
+                .FirstOrDefaultAsync(item => item.PermissionName == DomainValues.Permissions.BorrowerManage);
+            if (permission == null)
+            {
+                permission = new Permission
+                {
+                    PermissionName = DomainValues.Permissions.BorrowerManage,
+                    Description = "Maintain borrower profiles and eligibility."
+                };
+                db.Permissions.Add(permission);
+                await db.SaveChangesAsync();
+            }
+
+            if (!await db.RolePermissions.AnyAsync(link =>
+                    link.RoleId == adminRole.Id && link.PermissionId == permission.PermissionId))
+            {
+                db.RolePermissions.Add(new RolePermission
+                {
+                    RoleId = adminRole.Id,
+                    PermissionId = permission.PermissionId
+                });
+                await db.SaveChangesAsync();
+            }
         }
     }
 }
