@@ -84,7 +84,7 @@
         }
         @if (isAdmin && User.HasClaim("permission", DomainValues.Permissions.BorrowerManage))
         {
-            <span class="nav-item nav-item-disabled">@await Html.PartialAsync("Icons/_Icon", "users")<span class="flex-1">Borrower profiles</span><span class="soon-tag">Soon</span></span>
+            <a asp-controller="BorrowerProfile" asp-action="Index" class="nav-item @(currentController == "BorrowerProfile" ? "nav-item-active" : "")" aria-current="@(currentController == "BorrowerProfile" ? "page" : null)">@await Html.PartialAsync("Icons/_Icon", "users")<span>Borrower profiles</span></a>
         }
         @if (isAdmin && User.HasClaim("permission", DomainValues.Permissions.UserRoleManage))
         {

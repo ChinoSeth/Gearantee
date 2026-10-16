@@ -106,6 +106,13 @@ namespace ASI.Basecode.Services.ServiceModels.UserAdministration
         public string ContactNumber { get; set; }
 
         public bool IsActive { get; set; }
+
+        /// <summary>
+        /// The borrower profile ConcurrencyStamp as rendered into the account form.
+        /// Compared before profile fields are written so a stale account form cannot
+        /// overwrite a newer Borrower profiles save.
+        /// </summary>
+        public string BorrowerProfileConcurrencyStamp { get; set; }
     }
 
     public class RolePermissionsViewModel
