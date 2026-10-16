@@ -14,6 +14,8 @@ namespace ASI.Basecode.Services.Services
 {
     public class BorrowerProfileService : ServiceBase, IBorrowerProfileService
     {
+        private const int PageSize = 10;
+
         private const string StaleMessage =
             "This borrower record changed after you opened it. Reload the page and try again.";
 
@@ -30,11 +32,38 @@ namespace ASI.Basecode.Services.Services
             _userManager = userManager;
         }
 
-        public async Task<List<BorrowerProfileViewModel>> GetBorrowerProfilesAsync()
+        public async Task<BorrowerProfileListViewModel> GetBorrowerProfilesAsync(string search, int page)
         {
-            return await Project(_db.BorrowerProfiles.AsNoTracking())
+            IQueryable<BorrowerProfile> query = _db.BorrowerProfiles.AsNoTracking();
+
+            var term = search?.Trim().ToLowerInvariant();
+            if (!string.IsNullOrEmpty(term))
+            {
+                query = query.Where(profile =>
+                    profile.SchoolId.ToLower().Contains(term) ||
+                    profile.Department.ToLower().Contains(term) ||
+                    profile.User.FirstName.ToLower().Contains(term) ||
+                    profile.User.LastName.ToLower().Contains(term));
+            }
+
+            var totalCount = await query.CountAsync();
+            var totalPages = Math.Max(1, (int)Math.Ceiling(totalCount / (double)PageSize));
+            var currentPage = Math.Min(Math.Max(1, page), totalPages);
+
+            var borrowers = await Project(query)
                 .OrderBy(profile => profile.SchoolId)
+                .Skip((currentPage - 1) * PageSize)
+                .Take(PageSize)
                 .ToListAsync();
+
+            return new BorrowerProfileListViewModel
+            {
+                Borrowers = borrowers,
+                Search = search,
+                Page = currentPage,
+                TotalPages = totalPages,
+                TotalCount = totalCount
+            };
         }
 
         public async Task<BorrowerProfileViewModel> GetBorrowerProfileAsync(long id)

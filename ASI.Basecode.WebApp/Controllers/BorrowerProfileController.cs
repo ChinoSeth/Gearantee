@@ -30,10 +30,10 @@ namespace ASI.Basecode.WebApp.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string search, int page = 1)
         {
-            var borrowers = await _borrowerProfileService.GetBorrowerProfilesAsync();
-            return View(borrowers);
+            var model = await _borrowerProfileService.GetBorrowerProfilesAsync(search, page);
+            return View(model);
         }
 
         [HttpGet]
