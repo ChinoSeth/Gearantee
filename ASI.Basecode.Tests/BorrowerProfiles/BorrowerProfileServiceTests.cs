@@ -38,7 +38,8 @@ namespace ASI.Basecode.Tests.BorrowerProfiles
             await SeedProfileAsync(scope, "S-001", "Juan", "Dela Cruz", "College of Computing", "0917-000-0001", isEligible: false);
             await SeedProfileAsync(scope, "S-003", "Ana", "Reyes", "College of Science", null, isEligible: true);
 
-            var profiles = await service.GetBorrowerProfilesAsync();
+            var result = await service.GetBorrowerProfilesAsync(null, 1);
+            var profiles = result.Borrowers;
 
             Assert.Equal(3, profiles.Count);
             Assert.Equal(new[] { "S-001", "S-002", "S-003" }, profiles.Select(profile => profile.SchoolId));
@@ -65,7 +66,8 @@ namespace ASI.Basecode.Tests.BorrowerProfiles
 
             await SeedProfileAsync(scope, "S-100", "Solo", string.Empty, "College of Arts", null, isEligible: true);
 
-            var profile = Assert.Single(await service.GetBorrowerProfilesAsync());
+            var result = await service.GetBorrowerProfilesAsync(null, 1);
+            var profile = Assert.Single(result.Borrowers);
 
             Assert.Equal("Solo", profile.BorrowerName);
         }
@@ -426,6 +428,83 @@ namespace ASI.Basecode.Tests.BorrowerProfiles
                 new ValidationContext(model),
                 results,
                 validateAllProperties: true));
+        }
+
+        [Fact]
+        public async Task GetBorrowerProfilesAsync_PagesTenRecordsPerPage()
+        {
+            using var database = new SqliteDb();
+            using var provider = CreateProvider(database);
+            await using var scope = provider.CreateAsyncScope();
+            var service = scope.ServiceProvider.GetRequiredService<IBorrowerProfileService>();
+
+            for (var index = 1; index <= 12; index++)
+            {
+                await SeedProfileAsync(scope, $"S-{index:D3}", "Page", "Tester", "College of Computing", null, isEligible: true);
+            }
+
+            var firstPage = await service.GetBorrowerProfilesAsync(null, 1);
+
+            Assert.Equal(12, firstPage.TotalCount);
+            Assert.Equal(2, firstPage.TotalPages);
+            Assert.Equal(1, firstPage.Page);
+            Assert.Equal(10, firstPage.Borrowers.Count);
+            Assert.Equal("S-001", firstPage.Borrowers[0].SchoolId);
+            Assert.Equal("S-010", firstPage.Borrowers[9].SchoolId);
+
+            var secondPage = await service.GetBorrowerProfilesAsync(null, 2);
+
+            Assert.Equal(2, secondPage.Page);
+            Assert.Equal(2, secondPage.Borrowers.Count);
+            Assert.Equal("S-011", secondPage.Borrowers[0].SchoolId);
+            Assert.Equal("S-012", secondPage.Borrowers[1].SchoolId);
+        }
+
+        [Fact]
+        public async Task GetBorrowerProfilesAsync_ClampsAPagePastTheEnd()
+        {
+            using var database = new SqliteDb();
+            using var provider = CreateProvider(database);
+            await using var scope = provider.CreateAsyncScope();
+            var service = scope.ServiceProvider.GetRequiredService<IBorrowerProfileService>();
+
+            await SeedProfileAsync(scope, "S-700", "Only", "Three", "College of Arts", null, isEligible: true);
+            await SeedProfileAsync(scope, "S-701", "Only", "Three", "College of Arts", null, isEligible: true);
+            await SeedProfileAsync(scope, "S-702", "Only", "Three", "College of Arts", null, isEligible: true);
+
+            var page = await service.GetBorrowerProfilesAsync(null, 99);
+
+            Assert.Equal(1, page.TotalPages);
+            Assert.Equal(1, page.Page);
+            Assert.Equal(3, page.Borrowers.Count);
+        }
+
+        [Fact]
+        public async Task GetBorrowerProfilesAsync_SearchesSchoolIdNameAndDepartment()
+        {
+            using var database = new SqliteDb();
+            using var provider = CreateProvider(database);
+            await using var scope = provider.CreateAsyncScope();
+            var service = scope.ServiceProvider.GetRequiredService<IBorrowerProfileService>();
+
+            await SeedProfileAsync(scope, "S-901", "Alpha", "Zamora", "College of Computing", null, isEligible: true);
+            await SeedProfileAsync(scope, "S-902", "Beta", "Yap", "College of Nursing", null, isEligible: true);
+            await SeedProfileAsync(scope, "S-903", "Gamma", "Xavier", "College of Arts", null, isEligible: true);
+
+            var bySchoolId = await service.GetBorrowerProfilesAsync("s-902", 1);
+            Assert.Equal("S-902", Assert.Single(bySchoolId.Borrowers).SchoolId);
+
+            var byName = await service.GetBorrowerProfilesAsync("xavier", 1);
+            Assert.Equal("S-903", Assert.Single(byName.Borrowers).SchoolId);
+
+            var byDepartment = await service.GetBorrowerProfilesAsync("nursing", 1);
+            Assert.Equal("S-902", Assert.Single(byDepartment.Borrowers).SchoolId);
+
+            var noMatch = await service.GetBorrowerProfilesAsync("nothing matches this", 1);
+
+            Assert.Empty(noMatch.Borrowers);
+            Assert.Equal(0, noMatch.TotalCount);
+            Assert.Equal(1, noMatch.TotalPages);
         }
 
         private static async Task<(ApplicationUser User, BorrowerProfile Profile)> SeedProfileAsync(
