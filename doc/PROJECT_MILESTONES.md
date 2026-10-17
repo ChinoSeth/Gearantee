@@ -32,8 +32,8 @@ The tracker contains 44 leaf features. Group headings such as 2.00 and 4.00 are 
 | --- | --- |
 | Done | 5 |
 | In Review | 25 |
-| In Progress | 2 |
-| Not Started | 12 |
+| In Progress | 6 |
+| Not Started | 8 |
 | Blocked | 0 |
 
 ### By member
@@ -90,10 +90,10 @@ Shared rows count for each assigned member.
 | 36.00 | View Reservation Status | Cataraja | 10/6/2026 | 10/8/2026 | 2 | 10/7/2026 | | In Review | #26 | M4 |
 | 37.00 | Cancel Reservation | Cataraja | 10/6/2026 | 10/8/2026 | 2 | 10/7/2026 | | In Review | #26 | M4 |
 | **38.00** | **Transactions: Approval and Release** | | | | | | | | | |
-| 39.00 | View Reservation Requests | Cancencia | 10/9/2026 | 10/11/2026 | 2 | | | Not Started | | M5 |
-| 40.00 | Approve Reservation Requests | Cancencia | 10/9/2026 | 10/10/2026 | 1 | | | Not Started | | M5 |
-| 41.00 | Reject Reservation Requests | Cancencia | 10/9/2026 | 10/10/2026 | 1 | | | Not Started | | M5 |
-| 42.00 | Record Equipment Release | Cancencia | 10/9/2026 | 10/11/2026 | 2 | | | Not Started | | M5 |
+| 39.00 | View Reservation Requests | Cancencia | 10/9/2026 | 10/11/2026 | 2 | 10/17/2026 | | In Progress | | M5 |
+| 40.00 | Approve Reservation Requests | Cancencia | 10/9/2026 | 10/10/2026 | 1 | 10/17/2026 | | In Progress | | M5 |
+| 41.00 | Reject Reservation Requests | Cancencia | 10/9/2026 | 10/10/2026 | 1 | 10/17/2026 | | In Progress | | M5 |
+| 42.00 | Record Equipment Release | Cancencia | 10/9/2026 | 10/11/2026 | 2 | 10/17/2026 | | In Progress | | M5 |
 | **43.00** | **Transactions: Return and Condition Check** | | | | | | | | | |
 | 44.00 | Record Returned Item | Cataraja | 10/11/2026 | 10/13/2026 | 2 | | | Not Started | | M5 |
 | 45.00 | Update Item Condition Status | Cataraja | 10/11/2026 | 10/13/2026 | 2 | | | Not Started | | M5 |
@@ -396,3 +396,4 @@ The first version is complete when borrowers can securely reserve one available 
 | 10/14/2026 | Started WBS 52.00–55.00 implementation for searchable, filterable borrowing history and report generation | Bansag |
 | 10/14/2026 | Moved WBS 52.00–55.00 to In Review for PR #29; completed local build/test verification, generated Tailwind CSS, and updated the vulnerable XML cryptography dependency | Bansag |
 | 10/14/2026 | Started WBS 49.00–50.00 availability calendar and equipment/category/location filters | Laroco |
+| 10/17/2026 | Started WBS 39.00–42.00 reservation approval and release: custodian review queue, approve/reject with a required reason, and equipment release recorded under the item lock | Cancencia |
