@@ -1,3 +1,4 @@
+
 using ASI.Basecode.Data;
 using ASI.Basecode.Data.Interfaces;
 using ASI.Basecode.Data.Repositories;
@@ -20,21 +21,29 @@ namespace ASI.Basecode.WebApp
             _services.TryAddSingleton<IActionContextAccessor, ActionContextAccessor>();
             _services.TryAddSingleton<TimeProvider>(TimeProvider.System);
             _services.AddScoped<IUnitOfWork, UnitOfWork>();
+
             _services.Configure<BrevoOptions>(
                 Configuration.GetSection(BrevoOptions.SectionName));
+
             _services.AddHttpClient<IBrevoEmailSender, BrevoEmailSender>(
                 (serviceProvider, client) =>
                 {
                     var options = serviceProvider
                         .GetRequiredService<IOptions<BrevoOptions>>()
                         .Value;
+
                     client.BaseAddress = new Uri(
                         options.BaseUrl.TrimEnd('/') + "/");
                 });
+
             _services.AddScoped<IPasswordResetOtpStore, IdentityPasswordResetOtpStore>();
             _services.AddScoped<PasswordResetOtpService>();
             _services.AddScoped<IDashboardService, DashboardService>();
             _services.AddScoped<IUserAdministrationService, UserAdministrationService>();
+
+            // WBS 30.00–32.00: Borrower Profile Management
+            _services.AddScoped<IBorrowerProfileService, BorrowerProfileService>();
+
             _services.AddScoped<ICategoryService, CategoryService>();
             _services.AddScoped<IEquipmentItemService, EquipmentItemService>();
             _services.AddScoped<IAvailabilityCalendarService, AvailabilityCalendarService>();

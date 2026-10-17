@@ -18,7 +18,7 @@ namespace ASI.Basecode.Services.Services
     public partial class UserAdministrationService : IUserAdministrationService
     {
         private const int PageSize = 10;
-        private const string AdministrationLockName = "Gearantee.UserAdministration";
+        private const string AdministrationLockName = ASI.Basecode.Services.Utilities.AdministrationLock.ResourceName;
 
         private static readonly IReadOnlyDictionary<string, string> PermissionLabels =
             new Dictionary<string, string>
@@ -207,6 +207,7 @@ namespace ASI.Basecode.Services.Services
                 SchoolId = user.BorrowerProfile?.SchoolId,
                 Department = user.BorrowerProfile?.Department,
                 ContactNumber = user.BorrowerProfile?.ContactNumber,
+                BorrowerProfileConcurrencyStamp = user.BorrowerProfile?.ConcurrencyStamp,
                 IsActive = user.IsActive
             };
         }
@@ -503,6 +504,18 @@ namespace ASI.Basecode.Services.Services
                     }
                 }
 
+                if (needsBorrowerProfile &&
+                    profile != null &&
+                    !string.Equals(
+                        profile.ConcurrencyStamp,
+                        model.BorrowerProfileConcurrencyStamp,
+                        StringComparison.Ordinal))
+                {
+                    await transaction.RollbackAsync();
+                    return UserAdministrationResult.Stale(
+                        "This borrower profile changed after you opened it. Reload the page and try again.");
+                }
+
                 if (needsBorrowerProfile)
                 {
                     if (profile == null)
@@ -524,6 +537,7 @@ namespace ASI.Basecode.Services.Services
                     }
 
                     profile.ContactNumber = CleanOptional(model.ContactNumber);
+                    profile.ConcurrencyStamp = Guid.NewGuid().ToString();
                     profile.UpdatedAt = DateTime.UtcNow;
                 }
 
@@ -544,6 +558,12 @@ namespace ASI.Basecode.Services.Services
                 await _db.SaveChangesAsync();
                 await transaction.CommitAsync();
                 return UserAdministrationResult.Success("Account updated.");
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                await transaction.RollbackAsync();
+                return UserAdministrationResult.Stale(
+                    "This borrower profile changed after you opened it. Reload the page and try again.");
             }
             catch (DbUpdateException exception) when (IsUniqueViolation(exception))
             {

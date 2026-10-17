@@ -30,10 +30,10 @@ The tracker contains 44 leaf features. Group headings such as 2.00 and 4.00 are 
 
 | Status | Count |
 | --- | --- |
-| Done | 5 |
+| Done | 8 |
 | In Review | 25 |
 | In Progress | 6 |
-| Not Started | 8 |
+| Not Started | 5 |
 | Blocked | 0 |
 
 ### By member
@@ -81,9 +81,9 @@ Shared rows count for each assigned member.
 | 27.00 | Update Equipment Item | Bansag | 10/3/2026 | 10/6/2026 | 3 | 10/9/2026 | | In Review | #27 | M3 |
 | 28.00 | Delete Equipment Items | Bansag | 10/3/2026 | 10/6/2026 | 3 | 10/9/2026 | | In Review | #27 | M3 |
 | **29.00** | **Master Data: Borrower Profile Management** | | | | | | | | | |
-| 30.00 | View Borrower's Records | Cancencia | 9/29/2026 | 10/2/2026 | 3 | | | Not Started | | M3 |
-| 31.00 | Update Borrower's Records | Cancencia | 9/29/2026 | 10/2/2026 | 3 | | | Not Started | | M3 |
-| 32.00 | Update Eligibility Status | Cancencia | 9/29/2026 | 10/1/2026 | 2 | | | Not Started | | M3 |
+| 30.00 | View Borrower's Records | Cancencia | 9/29/2026 | 10/2/2026 | 3 | 10/3/2026 | 10/17/2026 | Done | #31 | M3 |
+| 31.00 | Update Borrower's Records | Cancencia | 9/29/2026 | 10/2/2026 | 3 | 10/3/2026 | 10/17/2026 | Done | #31 | M3 |
+| 32.00 | Update Eligibility Status | Cancencia | 9/29/2026 | 10/1/2026 | 2 | 10/3/2026 | 10/17/2026 | Done | #31 | M3 |
 | **33.00** | **Transactions: Equipment Reservation** | | | | | | | | | |
 | 34.00 | Search & View Available Items Page | Cataraja | 10/6/2026 | 10/7/2026 | 1 | 10/7/2026 | | In Review | #26 | M4 |
 | 35.00 | Create and Submit Reservation Request | Cataraja | 10/6/2026 | 10/8/2026 | 2 | 10/7/2026 | | In Review | #26 | M4 |
@@ -377,6 +377,7 @@ The first version is complete when borrowers can securely reserve one available 
 | 10/1/2026 | Started WBS 14.00–18.00 implementation for user accounts, role assignment, permissions, and account activation management | Laroco |
 | 10/1/2026 | Implemented the user-administration screens, Identity workflows, permission controls, SQL Server safeguards, documentation, and regression tests; awaiting PR review before advancing WBS status | Laroco |
 | 10/2/2026 | Moved WBS 14.00–18.00 to In Review for PR #22; addressed REQ-01 with atomic CSV account creation, UX/AUDIT-01 with trusted edit redisplay and no-op activation handling, and ROLE-EDGE-01 with inactive-admin demotion; added regression tests and import instructions | Laroco |
+| 10/3/2026 | Started WBS 30.00–32.00 (Borrower Profile Management: view, update, eligibility) | Canencia |
 | 10/4/2026 | Implemented equipment category creation (WBS 20.00) with duplicate checking, admin authorization, Tailwind views, and unit/authorization tests | Gesim |
 | 10/5/2026 | Moved WBS 20.00–23.00 to In Review for PR #25 per review handoff (SEC-01/SEC-02/STATE-01 pending correction; cleared premature Done/Actual End) | Gesim |
 | 10/6/2026 | Addressed PR #25 review handoff findings SEC-01, SEC-02, STATE-01, UX-01, LIST-01, and UX-02; added regression tests; clarified opt-in SQL Server tests and qualified inactive-category item registration | Gesim |
@@ -396,4 +397,6 @@ The first version is complete when borrowers can securely reserve one available 
 | 10/14/2026 | Started WBS 52.00–55.00 implementation for searchable, filterable borrowing history and report generation | Bansag |
 | 10/14/2026 | Moved WBS 52.00–55.00 to In Review for PR #29; completed local build/test verification, generated Tailwind CSS, and updated the vulnerable XML cryptography dependency | Bansag |
 | 10/14/2026 | Started WBS 49.00–50.00 availability calendar and equipment/category/location filters | Laroco |
+| 10/14/2026 | Moved WBS 30.00–32.00 to In Review for PR #31; added borrower-profile service and authorization tests | Canencia |
 | 10/17/2026 | Started WBS 39.00–42.00 reservation approval and release: custodian review queue, approve/reject with a required reason, and equipment release recorded under the item lock | Cancencia |
+| 10/17/2026 | Merged `staging` (PR #31) into the review branch; WBS 30.00–32.00 verified and moved to Done | Cancencia |

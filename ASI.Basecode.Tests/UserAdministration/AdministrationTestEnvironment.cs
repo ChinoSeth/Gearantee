@@ -51,6 +51,7 @@ namespace ASI.Basecode.Tests.UserAdministration
                     .AddEntityFrameworkStores<AsiBasecodeDBContext>().AddDefaultTokenProviders();
             }
             services.AddScoped<IUserAdministrationService, UserAdministrationService>();
+            services.AddScoped<IBorrowerProfileService, BorrowerProfileService>();
         }
 
         public static async Task<AdministrationTestEnvironment> CreateAsync(bool sqlServer = false)
