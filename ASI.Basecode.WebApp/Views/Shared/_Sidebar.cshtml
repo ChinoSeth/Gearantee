@@ -72,9 +72,9 @@
         {
             <span class="nav-item nav-item-disabled">@await Html.PartialAsync("Icons/_Icon", "review")<span class="flex-1">Approval &amp; release</span><span class="soon-tag">Soon</span></span>
         }
-        @if (isCustodian && User.HasClaim("permission", DomainValues.Permissions.TransactionReleaseReturn))
+        @if ((isCustodian || isAdmin) && User.HasClaim("permission", DomainValues.Permissions.TransactionReleaseReturn))
         {
-            <span class="nav-item nav-item-disabled">@await Html.PartialAsync("Icons/_Icon", "return")<span class="flex-1">Return &amp; condition</span><span class="soon-tag">Soon</span></span>
+            <a asp-controller="ReturnRecord" asp-action="Index" class="nav-item @(currentController == "ReturnRecord" ? "nav-item-active" : "")" aria-current="@(currentController == "ReturnRecord" ? "page" : null)">@await Html.PartialAsync("Icons/_Icon", "return")<span>Return &amp; condition</span></a>
         }
         @if (isAdmin && User.HasClaim("permission", DomainValues.Permissions.EquipmentManage))
         {

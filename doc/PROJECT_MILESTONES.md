@@ -31,9 +31,9 @@ The tracker contains 44 leaf features. Group headings such as 2.00 and 4.00 are 
 | Status | Count |
 | --- | --- |
 | Done | 5 |
-| In Review | 28 |
+| In Review | 32 |
 | In Progress | 2 |
-| Not Started | 9 |
+| Not Started | 5 |
 | Blocked | 0 |
 
 ### By member
@@ -95,10 +95,10 @@ Shared rows count for each assigned member.
 | 41.00 | Reject Reservation Requests | Cancencia | 10/9/2026 | 10/10/2026 | 1 | | | Not Started | | M5 |
 | 42.00 | Record Equipment Release | Cancencia | 10/9/2026 | 10/11/2026 | 2 | | | Not Started | | M5 |
 | **43.00** | **Transactions: Return and Condition Check** | | | | | | | | | |
-| 44.00 | Record Returned Item | Cataraja | 10/11/2026 | 10/13/2026 | 2 | | | Not Started | | M5 |
-| 45.00 | Update Item Condition Status | Cataraja | 10/11/2026 | 10/13/2026 | 2 | | | Not Started | | M5 |
-| 46.00 | Update Item Status | Cataraja | 10/11/2026 | 10/13/2026 | 2 | | | Not Started | | M5 |
-| 47.00 | Identify Late Returns | Cataraja | 10/11/2026 | 10/13/2026 | 2 | | | Not Started | | M5 |
+| 44.00 | Record Returned Item | Cataraja | 10/11/2026 | 10/13/2026 | 2 | 10/17/2026 | | In Review | #32 | M5 |
+| 45.00 | Update Item Condition Status | Cataraja | 10/11/2026 | 10/13/2026 | 2 | 10/17/2026 | | In Review | #32 | M5 |
+| 46.00 | Update Item Status | Cataraja | 10/11/2026 | 10/13/2026 | 2 | 10/17/2026 | | In Review | #32 | M5 |
+| 47.00 | Identify Late Returns | Cataraja | 10/11/2026 | 10/13/2026 | 2 | 10/17/2026 | | In Review | #32 | M5 |
 | **48.00** | **Reports: Availability Calendar** | | | | | | | | | |
 | 49.00 | View Availability Calendar Page | Laroco | 10/9/2026 | 10/13/2026 | 4 | 10/14/2026 | | In Progress | | M6 |
 | 50.00 | Filter Calendar View | Laroco | 10/10/2026 | 10/12/2026 | 2 | 10/14/2026 | | In Progress | | M6 |
@@ -398,3 +398,6 @@ The first version is complete when borrowers can securely reserve one available 
 | 10/14/2026 | Moved WBS 52.00–55.00 to In Review for PR #29; completed local build/test verification, generated Tailwind CSS, and updated the vulnerable XML cryptography dependency | Bansag |
 | 10/14/2026 | Started WBS 49.00–50.00 availability calendar and equipment/category/location filters | Laroco |
 | 10/14/2026 | Moved WBS 30.00–32.00 to In Review for PR #31; added borrower-profile service and authorization tests | Canencia |
+| 10/17/2026 | Started WBS 44.00–47.00: custodian return desk with On loan/Overdue/Returned/Late tabs, return time and receiver, condition and resulting item status (damaged items never auto-Available), automatic late-return records with whole days late, back-dated returns that require a reason note, and SQL Server race tests | Cataraja |
+| 10/17/2026 | Moved WBS 44.00–47.00 to In Review for PR #32; fixed a SQL Server deadlock when two returns are recorded at once and added opt-in SQL Server race tests | Cataraja |
+| 10/17/2026 | Addressed PR #32 review AUTH-01 for WBS 44.00–47.00 (still In Review): the return permission re-check now runs inside the return transaction under the shared administration lock (Shared mode, before the equipment lock); added SQL Server revocation race tests | Cataraja |
