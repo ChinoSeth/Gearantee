@@ -46,5 +46,10 @@ namespace ASI.Basecode.Data.Models
             public const string NeedsInspection = "NeedsInspection";
             public const string UnderRepair = "UnderRepair";
         }
+
+        public static class PenaltyStatuses
+        {
+            public const string Recorded = "Recorded";
+        }
     }
 }
