@@ -31,8 +31,8 @@ The tracker contains 44 leaf features. Group headings such as 2.00 and 4.00 are 
 | Status | Count |
 | --- | --- |
 | Done | 8 |
-| In Review | 29 |
-| In Progress | 6 |
+| In Review | 33 |
+| In Progress | 2 |
 | Not Started | 1 |
 | Blocked | 0 |
 
@@ -90,10 +90,10 @@ Shared rows count for each assigned member.
 | 36.00 | View Reservation Status | Cataraja | 10/6/2026 | 10/8/2026 | 2 | 10/7/2026 | | In Review | #26 | M4 |
 | 37.00 | Cancel Reservation | Cataraja | 10/6/2026 | 10/8/2026 | 2 | 10/7/2026 | | In Review | #26 | M4 |
 | **38.00** | **Transactions: Approval and Release** | | | | | | | | | |
-| 39.00 | View Reservation Requests | Cancencia | 10/9/2026 | 10/11/2026 | 2 | 10/17/2026 | | In Progress | | M5 |
-| 40.00 | Approve Reservation Requests | Cancencia | 10/9/2026 | 10/10/2026 | 1 | 10/17/2026 | | In Progress | | M5 |
-| 41.00 | Reject Reservation Requests | Cancencia | 10/9/2026 | 10/10/2026 | 1 | 10/17/2026 | | In Progress | | M5 |
-| 42.00 | Record Equipment Release | Cancencia | 10/9/2026 | 10/11/2026 | 2 | 10/17/2026 | | In Progress | | M5 |
+| 39.00 | View Reservation Requests | Cancencia | 10/9/2026 | 10/11/2026 | 2 | 10/17/2026 | | In Review | #<the number> | M5 |
+| 40.00 | Approve Reservation Requests | Cancencia | 10/9/2026 | 10/10/2026 | 1 | 10/17/2026 | | In Review | #<the number> | M5 |
+| 41.00 | Reject Reservation Requests | Cancencia | 10/9/2026 | 10/10/2026 | 1 | 10/17/2026 | | In Review | #<the number> | M5 |
+| 42.00 | Record Equipment Release | Cancencia | 10/9/2026 | 10/11/2026 | 2 | 10/17/2026 | | In Review | #<the number> | M5 |
 | **43.00** | **Transactions: Return and Condition Check** | | | | | | | | | |
 | 44.00 | Record Returned Item | Cataraja | 10/11/2026 | 10/13/2026 | 2 | 10/17/2026 | | In Review | #32 | M5 |
 | 45.00 | Update Item Condition Status | Cataraja | 10/11/2026 | 10/13/2026 | 2 | 10/17/2026 | | In Review | #32 | M5 |
@@ -403,3 +403,4 @@ The first version is complete when borrowers can securely reserve one available 
 | 10/17/2026 | Started WBS 44.00–47.00: custodian return desk with On loan/Overdue/Returned/Late tabs, return time and receiver, condition and resulting item status (damaged items never auto-Available), automatic late-return records with whole days late, back-dated returns that require a reason note, and SQL Server race tests | Cataraja |
 | 10/17/2026 | Moved WBS 44.00–47.00 to In Review for PR #32; fixed a SQL Server deadlock when two returns are recorded at once and added opt-in SQL Server race tests | Cataraja |
 | 10/17/2026 | Addressed PR #32 review AUTH-01 for WBS 44.00–47.00 (still In Review): the return permission re-check now runs inside the return transaction under the shared administration lock (Shared mode, before the equipment lock); added SQL Server revocation race tests | Cataraja |
+| 10/17/2026 | Moved WBS 39.00–42.00 to In Review for PR #<the number>: custodian review queue, approve/reject with a required reason, and equipment release recorded under the item lock; 20 new tests | Cancencia |
