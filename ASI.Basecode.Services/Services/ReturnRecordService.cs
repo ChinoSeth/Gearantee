@@ -21,6 +21,7 @@ namespace ASI.Basecode.Services.Services
         public const string ReturnedTab = "Returned";
         public const string LateTab = "Late";
         private const int NotesMaxLength = 1000;
+        private const string NoPermissionMessage = "You no longer have permission to record returns.";
         private const string AlreadyReturnedMessage = "This item has already been returned. Reload the page to see the latest loans.";
 
         private readonly AsiBasecodeDBContext _db;
@@ -93,11 +94,6 @@ namespace ASI.Basecode.Services.Services
             if (model == null)
             {
                 return ReturnRecordResult.Fail("The return form is incomplete. Reload and try again.");
-            }
-
-            if (!CanRecordReturns(userId))
-            {
-                return ReturnRecordResult.Fail("You no longer have permission to record returns.");
             }
 
             var condition = ReturnInspection.Normalize(ReturnInspection.Conditions, model.ReturnedCondition);
@@ -193,10 +189,16 @@ namespace ASI.Basecode.Services.Services
                 };
             }
 
-            // Item row lock serializes same-item returns; no ReturnRecord range read here (deadlocks)
+            // Lock order: admin lock, then item row lock; no ReturnRecord range read here (deadlocks)
             DbUpdateException saveFailure = null;
             using (var transaction = _db.Database.BeginTransaction(IsolationLevel.Serializable))
             {
+                AcquireAdministrationReadLock();
+                if (!CanRecordReturns(userId))
+                {
+                    return ReturnRecordResult.Fail(NoPermissionMessage);
+                }
+
                 var lockedItem = EquipmentItemConcurrencyLock.LoadForUpdate(_db, loan.EquipmentId, includeArchived: true);
                 if (lockedItem == null)
                 {
@@ -269,6 +271,24 @@ namespace ASI.Basecode.Services.Services
             return _reservationRepository.GetReservations()
                 .AsNoTracking()
                 .Where(reservation => reservation.ReleaseRecord != null && reservation.ReleaseRecord.ReturnRecord == null);
+        }
+
+        // Shared mode: permission changes (Exclusive) wait for in-flight returns and vice versa
+        private void AcquireAdministrationReadLock()
+        {
+            if (!_db.Database.IsSqlServer())
+            {
+                return;
+            }
+
+            _db.Database.ExecuteSqlInterpolated(
+                $@"DECLARE @lockResult int;
+EXEC @lockResult = sys.sp_getapplock
+    @Resource = {AdministrationLock.ResourceName},
+    @LockMode = 'Shared',
+    @LockOwner = 'Transaction',
+    @LockTimeout = 15000;
+IF @lockResult < 0 THROW 51000, 'Could not acquire the user administration lock.', 1;");
         }
 
         // DB-backed check; cookie claims aren't refreshed when grants change
