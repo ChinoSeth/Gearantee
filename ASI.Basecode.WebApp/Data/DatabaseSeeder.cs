@@ -381,7 +381,7 @@ namespace ASI.Basecode.WebApp.Data
                     DueAt = late.ReservationEnd,
                     ReturnedAt = late.ReservationEnd.AddDays(2),
                     DaysLate = 2,
-                    PenaltyStatus = "Recorded",
+                    PenaltyStatus = DomainValues.PenaltyStatuses.Recorded,
                     Notes = "DEMO: Sample late-return history."
                 });
                 await dbContext.SaveChangesAsync();

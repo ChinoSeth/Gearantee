@@ -52,10 +52,12 @@ namespace ASI.Basecode.WebApp
             _services.AddScoped<IEquipmentItemRepository, EquipmentItemRepository>();
             _services.AddScoped<IBorrowerProfileRepository, BorrowerProfileRepository>();
             _services.AddScoped<IReservationRepository, ReservationRepository>();
+            _services.AddScoped<IReturnRecordRepository, ReturnRecordRepository>();
 
             // Services
             _services.AddScoped<ICatalogService, CatalogService>();
             _services.AddScoped<IReservationService, ReservationService>();
+            _services.AddScoped<IReturnRecordService, ReturnRecordService>();
             _services.AddScoped<IBorrowingHistoryService, BorrowingHistoryService>();
         }
     }
