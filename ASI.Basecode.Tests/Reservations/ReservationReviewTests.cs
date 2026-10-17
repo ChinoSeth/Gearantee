@@ -421,19 +421,14 @@ namespace ASI.Basecode.Tests.Reservations
             Assert.False(result.Succeeded);
             Assert.Contains("UnderMaintenance", result.Message.Replace(" ", string.Empty));
             Assert.Equal(DomainValues.EquipmentStatuses.UnderMaintenance, ReloadItem(db, item.EquipmentId).ItemStatus);
-
-            // The fixture item is restored so later assertions in this test stay meaningful.
-            item.ItemStatus = DomainValues.EquipmentStatuses.Available;
-            db.SaveChanges();
-            Assert.Equal(DomainValues.EquipmentStatuses.Available, ReloadItem(db, item.EquipmentId).ItemStatus);
         }
 
         /// <summary>
-        /// Release needs its own permission: a custodian who may review but not release can
-        /// neither record a handover nor be tricked into one.
+        /// Permissions are granted per role, so a custodian role that may review but not release
+        /// must not be able to record a handover.
         /// </summary>
         [Fact]
-        public void Release_is_denied_without_the_release_permission()
+        public void Release_is_denied_for_a_custodian_who_may_only_review()
         {
             using var fixture = new SqliteDb();
             using var db = fixture.Create();
@@ -441,15 +436,32 @@ namespace ASI.Basecode.Tests.Reservations
             var item = DashboardSeed.Item(db, "ITEM-1");
             var reservation = DashboardSeed.Reservation(db, profile, item, Now.AddDays(1), Now.AddDays(2), DomainValues.ReservationStatuses.Approved);
             var reviewerOnly = Custodian(db, "CUS-1", ReviewPermission);
-            var releaserOnly = Custodian(db, "CUS-2", ReleasePermission);
-            var service = ReservationsFor(db, Now);
 
-            Assert.True(service.ReleaseEquipment(reviewerOnly.Id, reservation.ReservationId, null).Forbidden);
+            var result = ReservationsFor(db, Now).ReleaseEquipment(reviewerOnly.Id, reservation.ReservationId, null);
+
+            Assert.True(result.Forbidden);
             Assert.Empty(db.ReleaseRecords);
+            Assert.Equal(DomainValues.EquipmentStatuses.Available, ReloadItem(db, item.EquipmentId).ItemStatus);
+        }
 
-            // The reverse also holds: release permission alone doesn't allow approving.
-            Assert.True(service.ApproveReservation(releaserOnly.Id, reservation.ReservationId).Forbidden);
-            Assert.Equal(DomainValues.ReservationStatuses.Approved, Reload(db, reservation.ReservationId).Status);
+        /// <summary>
+        /// The reverse also holds: a custodian role that may release but not review cannot approve.
+        /// </summary>
+        [Fact]
+        public void Approve_is_denied_for_a_custodian_who_may_only_release()
+        {
+            using var fixture = new SqliteDb();
+            using var db = fixture.Create();
+            var profile = DashboardSeed.Profile(db, DashboardSeed.User(db, "BRW-1"));
+            var item = DashboardSeed.Item(db, "ITEM-1");
+            var reservation = DashboardSeed.Reservation(db, profile, item, Now.AddDays(1), Now.AddDays(2), DomainValues.ReservationStatuses.Pending);
+            var releaserOnly = Custodian(db, "CUS-1", ReleasePermission);
+
+            var result = ReservationsFor(db, Now).ApproveReservation(releaserOnly.Id, reservation.ReservationId);
+
+            Assert.True(result.Forbidden);
+            Assert.Equal(DomainValues.ReservationStatuses.Pending, Reload(db, reservation.ReservationId).Status);
+            Assert.Empty(db.AdministrationAuditEvents);
         }
 
         // ---------------------------------------------------------------- helpers
