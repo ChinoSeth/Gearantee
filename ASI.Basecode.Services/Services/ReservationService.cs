@@ -432,19 +432,49 @@ namespace ASI.Basecode.Services.Services
 
         public ReservationResult ApproveReservation(string actorUserId, long reservationId)
         {
+            // Fast rejection only. The authoritative check is repeated under the shared
+            // administration lock in the write transaction below.
             if (!CanReview(actorUserId, DomainValues.Permissions.ReservationReview))
             {
                 return ReservationResult.Denied(DeniedMessage);
             }
 
-            var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
+            // Read only the equipment key before the transaction so the item row can be
+            // locked before reservation state/range reads (same lock order as submissions).
+            var equipmentId = _reservationRepository.GetReservations()
+                .AsNoTracking()
+                .Where(reservation => reservation.ReservationId == reservationId)
+                .Select(reservation => (long?)reservation.EquipmentId)
+                .SingleOrDefault();
+            if (!equipmentId.HasValue)
+            {
+                return ReservationResult.Missing();
+            }
 
             using (var transaction = _db.Database.BeginTransaction(IsolationLevel.Serializable))
             {
+                AcquireAdministrationReadLock();
+                if (!CanReview(actorUserId, DomainValues.Permissions.ReservationReview))
+                {
+                    return ReservationResult.Denied(DeniedMessage);
+                }
+
+                // Lock ordering: administration lock -> equipment row -> reservation state.
+                var item = EquipmentItemConcurrencyLock.LoadForUpdate(_db, equipmentId.Value);
+                if (item == null)
+                {
+                    return ReservationResult.Fail("This item is archived or no longer exists, so its request can't be approved.");
+                }
+
                 var state = LoadReviewState(reservationId);
                 if (state == null)
                 {
                     return ReservationResult.Missing();
+                }
+
+                if (state.EquipmentId != equipmentId.Value)
+                {
+                    return ReservationResult.Fail(ChangedWhileReviewing);
                 }
 
                 if (state.Status != DomainValues.ReservationStatuses.Pending)
@@ -452,12 +482,43 @@ namespace ASI.Basecode.Services.Services
                     return ReservationResult.Fail(DecisionRefusal("approve", state.Status));
                 }
 
-                // The item lock keeps this decision serialized with submissions and inventory
-                // changes, and the recheck below uses the same availability rule as submission.
-                var item = EquipmentItemConcurrencyLock.LoadForUpdate(_db, state.EquipmentId);
-                if (item == null)
+                // Capture the current time only after the transaction has acquired the
+                // administration and equipment locks and reloaded the reservation state.
+                // This prevents an old timestamp from approving a request whose start time
+                // passes while the operation is waiting for a lock.
+                var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
+
+                // A page can remain open past the requested start time. Expire the Pending row
+                // inside this transaction rather than allowing a stale form to approve it.
+                if (state.ReservationStart <= nowUtc)
                 {
-                    return ReservationResult.Fail("This item is archived, so its request can't be approved.");
+                    var expired = _reservationRepository.GetReservations()
+                        .Where(reservation =>
+                            reservation.ReservationId == reservationId &&
+                            reservation.Status == DomainValues.ReservationStatuses.Pending &&
+                            reservation.ReservationStart <= nowUtc)
+                        .ExecuteUpdate(setters => setters
+                            .SetProperty(reservation => reservation.Status, DomainValues.ReservationStatuses.Expired)
+                            .SetProperty(reservation => reservation.UpdatedAt, nowUtc));
+
+                    if (expired == 0)
+                    {
+                        return ReservationResult.Fail(ChangedWhileReviewing);
+                    }
+
+                    transaction.Commit();
+                    return ReservationResult.Fail("This request expired before it was reviewed. Reload the page to see its current status.");
+                }
+
+                // Reapply the exact rule used by the borrower availability workflow after
+                // acquiring the item lock: not archived, category active, and Available/Borrowed.
+                var isReservable = _equipmentItemRepository.GetEquipmentItems()
+                    .AsNoTracking()
+                    .Where(ReservationAvailability.IsReservable())
+                    .Any(candidate => candidate.EquipmentId == state.EquipmentId);
+                if (!isReservable)
+                {
+                    return ReservationResult.Fail("This item is no longer available for lending, or its category is inactive.");
                 }
 
                 var isBooked = _reservationRepository.GetReservations()
@@ -471,7 +532,8 @@ namespace ASI.Basecode.Services.Services
                 var approved = _reservationRepository.GetReservations()
                     .Where(reservation =>
                         reservation.ReservationId == reservationId &&
-                        reservation.Status == DomainValues.ReservationStatuses.Pending)
+                        reservation.Status == DomainValues.ReservationStatuses.Pending &&
+                        reservation.ReservationStart > nowUtc)
                     .ExecuteUpdate(setters => setters
                         .SetProperty(reservation => reservation.Status, DomainValues.ReservationStatuses.Approved)
                         .SetProperty(reservation => reservation.ReviewedByUserId, actorUserId)
@@ -491,7 +553,6 @@ namespace ASI.Basecode.Services.Services
                 "Reservation approved. The borrower can pick the item up.",
                 reservationId);
         }
-
         public ReservationResult RejectReservation(string actorUserId, long reservationId, string reason)
         {
             if (!CanReview(actorUserId, DomainValues.Permissions.ReservationReview))
@@ -514,6 +575,12 @@ namespace ASI.Basecode.Services.Services
 
             using (var transaction = _db.Database.BeginTransaction(IsolationLevel.Serializable))
             {
+                AcquireAdministrationReadLock();
+                if (!CanReview(actorUserId, DomainValues.Permissions.ReservationReview))
+                {
+                    return ReservationResult.Denied(DeniedMessage);
+                }
+
                 var state = LoadReviewState(reservationId);
                 if (state == null)
                 {
@@ -525,8 +592,6 @@ namespace ASI.Basecode.Services.Services
                     return ReservationResult.Fail(DecisionRefusal("reject", state.Status));
                 }
 
-                // No inventory change here, so the conditional update alone settles a race with
-                // another custodian decision on the same request.
                 var rejected = _reservationRepository.GetReservations()
                     .Where(reservation =>
                         reservation.ReservationId == reservationId &&
@@ -553,7 +618,6 @@ namespace ASI.Basecode.Services.Services
 
             return ReservationResult.Success("Reservation rejected.", reservationId);
         }
-
         public ReservationResult ReleaseEquipment(string actorUserId, long reservationId, string notes)
         {
             if (!CanReview(actorUserId, DomainValues.Permissions.TransactionReleaseReturn))
@@ -567,14 +631,44 @@ namespace ASI.Basecode.Services.Services
                 return ReservationResult.Fail($"The notes must be {NotesMaxLength} characters or fewer.");
             }
 
+            // As with approval, obtain only the equipment key before the transaction so the
+            // item lock is acquired before reservation state/range reads.
+            var equipmentId = _reservationRepository.GetReservations()
+                .AsNoTracking()
+                .Where(reservation => reservation.ReservationId == reservationId)
+                .Select(reservation => (long?)reservation.EquipmentId)
+                .SingleOrDefault();
+            if (!equipmentId.HasValue)
+            {
+                return ReservationResult.Missing();
+            }
+
             var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
             using (var transaction = _db.Database.BeginTransaction(IsolationLevel.Serializable))
             {
+                AcquireAdministrationReadLock();
+                if (!CanReview(actorUserId, DomainValues.Permissions.TransactionReleaseReturn))
+                {
+                    return ReservationResult.Denied(DeniedMessage);
+                }
+
+                // Lock ordering: administration lock -> equipment row -> reservation state.
+                var item = EquipmentItemConcurrencyLock.LoadForUpdate(_db, equipmentId.Value);
+                if (item == null)
+                {
+                    return ReservationResult.Fail("This item is archived or no longer exists, so its release can't be recorded.");
+                }
+
                 var state = LoadReviewState(reservationId);
                 if (state == null)
                 {
                     return ReservationResult.Missing();
+                }
+
+                if (state.EquipmentId != equipmentId.Value)
+                {
+                    return ReservationResult.Fail(ChangedWhileReviewing);
                 }
 
                 if (state.Status != DomainValues.ReservationStatuses.Approved)
@@ -590,19 +684,11 @@ namespace ASI.Basecode.Services.Services
                     return ReservationResult.Fail("This item has already been released for this reservation.");
                 }
 
-                var item = EquipmentItemConcurrencyLock.LoadForUpdate(_db, state.EquipmentId);
-                if (item == null)
-                {
-                    return ReservationResult.Fail("This item is archived, so its release can't be recorded.");
-                }
-
                 if (!ReservationAvailability.IsReservableStatus(item.ItemStatus))
                 {
                     return ReservationResult.Fail($"This item is marked {item.ItemStatus}, so it can't be released.");
                 }
 
-                // One physical item can only be out once: refuse while another unreturned loan
-                // exists for the same item.
                 var onLoanElsewhere = _reservationRepository.GetReservations()
                     .Any(reservation =>
                         reservation.EquipmentId == state.EquipmentId &&
@@ -634,8 +720,6 @@ namespace ASI.Basecode.Services.Services
                 }
                 catch (DbUpdateException)
                 {
-                    // ReleaseRecord.ReservationId is unique, so a double release is refused by the
-                    // database even when two custodians submit at the same moment.
                     transaction.Rollback();
                     return ReservationResult.Fail("This item has already been released for this reservation.");
                 }
@@ -648,11 +732,24 @@ namespace ASI.Basecode.Services.Services
                 reservationId);
         }
 
-        /// <summary>
-        /// Database-backed authorization for custodian decisions. The controller also requires the
-        /// role and the policy, but those are evaluated against the sign-in cookie, whose claims
-        /// are not refreshed when a role's permissions change. Mirrors CategoryService.
-        /// </summary>
+        // Shared mode makes review/release writes serialize with UserAdministrationService's
+        // exclusive permission-change lock. No-op for SQLite, where it is a test-only provider.
+        private void AcquireAdministrationReadLock()
+        {
+            if (!_db.Database.IsSqlServer())
+            {
+                return;
+            }
+
+            _db.Database.ExecuteSqlInterpolated(
+                $@"DECLARE @lockResult int;
+EXEC @lockResult = sys.sp_getapplock
+    @Resource = {AdministrationLock.ResourceName},
+    @LockMode = 'Shared',
+    @LockOwner = 'Transaction',
+    @LockTimeout = 15000;
+IF @lockResult < 0 THROW 51000, 'Could not acquire the user administration lock.', 1;");
+        }
         private bool CanReview(string actorUserId, string permissionName)
         {
             if (string.IsNullOrWhiteSpace(actorUserId))

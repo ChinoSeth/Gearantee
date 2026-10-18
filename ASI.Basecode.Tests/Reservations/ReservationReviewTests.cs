@@ -179,6 +179,83 @@ namespace ASI.Basecode.Tests.Reservations
             Assert.Equal(DomainValues.ReservationStatuses.Pending, Reload(db, target.ReservationId).Status);
         }
 
+        [Theory]
+        [InlineData(DomainValues.EquipmentStatuses.UnderMaintenance)]
+        [InlineData(DomainValues.EquipmentStatuses.Unavailable)]
+        public void Approve_refuses_when_item_status_becomes_unreservable_after_submission(string newStatus)
+        {
+            using var fixture = new SqliteDb();
+            using var db = fixture.Create();
+            var profile = DashboardSeed.Profile(db, DashboardSeed.User(db, "BRW-1"));
+            var item = DashboardSeed.Item(db, "ITEM-1");
+            var reservation = DashboardSeed.Reservation(db, profile, item, Now.AddDays(1), Now.AddDays(2), DomainValues.ReservationStatuses.Pending);
+            item.ItemStatus = newStatus;
+            db.SaveChanges();
+            var custodian = Custodian(db, "CUS-1", ReviewPermission);
+
+            var result = ReservationsFor(db, Now).ApproveReservation(custodian.Id, reservation.ReservationId);
+
+            Assert.False(result.Succeeded);
+            Assert.Equal(DomainValues.ReservationStatuses.Pending, Reload(db, reservation.ReservationId).Status);
+            Assert.Empty(db.AdministrationAuditEvents);
+        }
+
+        [Fact]
+        public void Approve_refuses_when_item_is_archived_after_submission()
+        {
+            using var fixture = new SqliteDb();
+            using var db = fixture.Create();
+            var profile = DashboardSeed.Profile(db, DashboardSeed.User(db, "BRW-1"));
+            var item = DashboardSeed.Item(db, "ITEM-1");
+            var reservation = DashboardSeed.Reservation(db, profile, item, Now.AddDays(1), Now.AddDays(2), DomainValues.ReservationStatuses.Pending);
+            item.IsArchived = true;
+            db.SaveChanges();
+            var custodian = Custodian(db, "CUS-1", ReviewPermission);
+
+            var result = ReservationsFor(db, Now).ApproveReservation(custodian.Id, reservation.ReservationId);
+
+            Assert.False(result.Succeeded);
+            Assert.Equal(DomainValues.ReservationStatuses.Pending, Reload(db, reservation.ReservationId).Status);
+            Assert.Empty(db.AdministrationAuditEvents);
+        }
+
+        [Fact]
+        public void Approve_refuses_when_category_becomes_inactive_after_submission()
+        {
+            using var fixture = new SqliteDb();
+            using var db = fixture.Create();
+            var profile = DashboardSeed.Profile(db, DashboardSeed.User(db, "BRW-1"));
+            var item = DashboardSeed.Item(db, "ITEM-1");
+            var reservation = DashboardSeed.Reservation(db, profile, item, Now.AddDays(1), Now.AddDays(2), DomainValues.ReservationStatuses.Pending);
+            var category = db.EquipmentCategories.Single(entry => entry.CategoryId == item.CategoryId);
+            category.IsActive = false;
+            db.SaveChanges();
+            var custodian = Custodian(db, "CUS-1", ReviewPermission);
+
+            var result = ReservationsFor(db, Now).ApproveReservation(custodian.Id, reservation.ReservationId);
+
+            Assert.False(result.Succeeded);
+            Assert.Equal(DomainValues.ReservationStatuses.Pending, Reload(db, reservation.ReservationId).Status);
+            Assert.Empty(db.AdministrationAuditEvents);
+        }
+
+        [Fact]
+        public void Approve_expires_pending_request_if_its_start_passes_before_submit()
+        {
+            using var fixture = new SqliteDb();
+            using var db = fixture.Create();
+            var profile = DashboardSeed.Profile(db, DashboardSeed.User(db, "BRW-1"));
+            var item = DashboardSeed.Item(db, "ITEM-1");
+            var reservation = DashboardSeed.Reservation(db, profile, item, Now.AddMinutes(-1), Now.AddHours(2), DomainValues.ReservationStatuses.Pending);
+            var custodian = Custodian(db, "CUS-1", ReviewPermission);
+
+            var result = ReservationsFor(db, Now).ApproveReservation(custodian.Id, reservation.ReservationId);
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("expired", result.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(DomainValues.ReservationStatuses.Expired, Reload(db, reservation.ReservationId).Status);
+            Assert.Empty(db.AdministrationAuditEvents);
+        }
         [Fact]
         public void Approve_refuses_a_request_that_is_no_longer_pending()
         {

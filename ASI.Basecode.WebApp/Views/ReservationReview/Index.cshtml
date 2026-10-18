@@ -39,11 +39,14 @@
         @foreach (var tab in Model.Tabs)
         {
             var isActive = tab.Value == Model.StatusFilter;
-            <a asp-action="Index" asp-route-status="@(string.IsNullOrEmpty(tab.Value) ? null : tab.Value)" asp-route-search="@(string.IsNullOrEmpty(Model.Search) ? null : Model.Search)"
-               class="border px-3 py-2 text-sm @(isActive ? "border-primary bg-tint font-semibold text-primary-strong" : "border-gray-200 bg-white text-gray-700")"
-               aria-current="@(isActive ? "page" : null)">@tab.Label <span class="ml-1 text-xs text-gray-500">@tab.Count</span></a>
-        }
-    </nav>
+            <form asp-action="Index" method="get" class="inline">
+                <input type="hidden" name="status" value="@tab.Value" />
+                <input type="hidden" name="search" value="@Model.Search" />
+                <button type="submit"
+                        class="border px-3 py-2 text-sm @(isActive ? "border-primary bg-tint font-semibold text-primary-strong" : "border-gray-200 bg-white text-gray-700")"
+                        aria-current="@(isActive ? "page" : null)">@tab.Label <span class="ml-1 text-xs text-gray-500">@tab.Count</span></button>
+            </form>
+        }    </nav>
 
     @if (Model.Items.Count == 0)
     {
@@ -98,11 +101,21 @@
             <div class="flex gap-2">
                 @if (Model.Page > 1)
                 {
-                    <a asp-action="Index" asp-route-status="@(string.IsNullOrEmpty(Model.StatusFilter) ? null : Model.StatusFilter)" asp-route-search="@(string.IsNullOrEmpty(Model.Search) ? null : Model.Search)" asp-route-page="@(Model.Page - 1)" class="border border-gray-200 bg-white px-3 py-2 text-gray-700">Previous</a>
+                    <form asp-action="Index" method="get" class="inline">
+                        <input type="hidden" name="status" value="@Model.StatusFilter" />
+                        <input type="hidden" name="search" value="@Model.Search" />
+                        <input type="hidden" name="page" value="@(Model.Page - 1)" />
+                        <button type="submit" class="border border-gray-200 bg-white px-3 py-2 text-gray-700">Previous</button>
+                    </form>
                 }
                 @if (Model.Page < Model.TotalPages)
                 {
-                    <a asp-action="Index" asp-route-status="@(string.IsNullOrEmpty(Model.StatusFilter) ? null : Model.StatusFilter)" asp-route-search="@(string.IsNullOrEmpty(Model.Search) ? null : Model.Search)" asp-route-page="@(Model.Page + 1)" class="border border-gray-200 bg-white px-3 py-2 text-gray-700">Next</a>
+                    <form asp-action="Index" method="get" class="inline">
+                        <input type="hidden" name="status" value="@Model.StatusFilter" />
+                        <input type="hidden" name="search" value="@Model.Search" />
+                        <input type="hidden" name="page" value="@(Model.Page + 1)" />
+                        <button type="submit" class="border border-gray-200 bg-white px-3 py-2 text-gray-700">Next</button>
+                    </form>
                 }
             </div>
         </nav>
